@@ -1,0 +1,99 @@
+{
+    "philosophy": "做菜不是归纳法，是生成模型的采样过程。每道菜都是在 flavor space 里的一次随机游走。烹饪是把原材料的概率分布转换成美味的过程，火候是时间的导数，调味是空间的映射。",
+    "recipes": {
+      "猪": [
+        {
+          "title": "香菇炸酱臊子",
+          "image": "images/pork1.jpg"
+        },
+        {
+          "title": "红烧肉的量子态",
+          "image": "images/pork2.jpg"
+        },
+        {
+          "title": "糖醋排骨的非线性变换",
+          "image": "images/pork3.jpg"
+        },
+        {
+          "title": "回锅肉的迭代算法",
+          "image": "images/pork4.jpg"
+        }
+      ],
+      "牛": [
+        {
+          "title": "黑椒牛肉的熵增过程",
+          "image": "images/beef1.jpg"
+        },
+        {
+          "title": "番茄牛腩的慢炖哲学",
+          "image": "images/beef2.jpg"
+        },
+        {
+          "title": "水煮牛肉的辣度梯度",
+          "image": "images/beef3.jpg"
+        }
+      ],
+      "羊": [
+        {
+          "title": "孜然羊肉的香料矩阵",
+          "image": "images/lamb1.jpg"
+        },
+        {
+          "title": "羊肉串的概率分布",
+          "image": "images/lamb2.jpg"
+        },
+        {
+          "title": "清炖羊肉的时间复杂度",
+          "image": "images/lamb3.jpg"
+        }
+      ],
+      "鸡": [
+        {
+          "title": "宫保鸡丁的离散数学",
+          "image": "images/chicken1.jpg"
+        },
+        {
+          "title": "口水鸡的流体力学",
+          "image": "images/chicken2.jpg"
+        },
+        {
+          "title": "辣子鸡的随机森林",
+          "image": "images/chicken3.jpg"
+        },
+        {
+          "title": "白切鸡的极简主义",
+          "image": "images/chicken4.jpg"
+        },
+        {
+          "title": "三杯鸡的黄金比例",
+          "image": "images/chicken5.jpg"
+        }
+      ],
+      "蔬菜": [
+        {
+          "title": "麻婆豆腐的相变理论",
+          "image": "images/veg1.jpg"
+        },
+        {
+          "title": "清炒时蔬的极简主义",
+          "image": "images/veg2.jpg"
+        },
+        {
+          "title": "凉拌黄瓜的信息论",
+          "image": "images/veg3.jpg"
+        },
+        {
+          "title": "地三鲜的三体问题",
+          "image": "images/veg4.jpg"
+        },
+        {
+          "title": "干煸四季豆的脆度函数",
+          "image": "images/veg5.jpg"
+        },
+        {
+          "title": "蒜蓉西兰花的分形几何",
+          "image": "images/veg6.jpg"
+        }
+      ]
+    }
+  }

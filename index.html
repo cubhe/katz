@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>咔滋的森林</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=Noto+Serif+SC:wght@200;300;400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav id="navbar">
+        <span data-page="kazhi">咔滋</span>
+        <span data-page="say">咔言咔语</span>
+        <span data-page="cooking">Deep Cooking</span>
+        <span data-page="listening">Deep Listening</span>
+    </nav>
+    
+    <div id="content"></div>
+    
+    <script>
+        // 模拟数据 - 实际部署时应从服务器加载
+        const mockData = {
+            kazhi: [
+                { "image": "https://images.unsplash.com/photo-1504548840739-580b10ae7715?w=800&q=80", "text": "做事要像蘑菇一样悄悄生长，然后惊艳所有人" },
+                { "image": "https://images.unsplash.com/photo-1528518290605-1fcc8dcca204?w=800&q=80", "text": "既然是森林，就不必害怕孤独" },
+                { "image": "https://images.unsplash.com/photo-1536431311719-398b6704d4cc?w=800&q=80", "text": "每个蘑菇都有自己的节奏" },
+                { "image": "https://images.unsplash.com/photo-1499343256340-863c15e16b48?w=800&q=80", "text": "在暗处积蓄力量，是为了更好的绽放" },
+                { "image": "https://images.unsplash.com/photo-1604251177154-ad0e56c7e822?w=800&q=80", "text": "生活就像采蘑菇，惊喜总在不经意间" }
+            ],
+            say: {
+                "Philosophy": [
+                    "感情像神经网络，训练过拟合就难以泛化",
+                    "所有方向都是一场增益控制",
+                    "人生是一个非凸优化问题，有很多局部最优解",
+                    "思考的熵越大，创造力越强"
+                ],
+                "Travel": [
+                    "在旧金山烈日下喝冰美式是人类学意义的一种幸福",
+                    "京都的寺庙教会我：沉默也是一种语言",
+                    "在冰岛看极光时，我理解了概率的美"
+                ],
+                "Life": [
+                    "做饭是我与混沌系统对话的方式",
+                    "养猫让我理解了什么是无条件的马尔可夫过程",
+                    "早起跑步是对抗熵增的日常仪式"
+                ],
+                "Tech": [
+                    "Debug 就像考古，每个 bug 都有它的历史",
+                    "好的架构像诗歌，简洁而富有表达力",
+                    "重构代码就像整理房间，让未来的自己感谢现在"
+                ]
+            },
+            cooking: {
+                "philosophy": "做菜不是归纳法，是生成模型的采样过程。每道菜都是在 flavor space 里的一次随机游走。",
+                "recipes": {
+                    "猪": [
+                        { "title": "香菇炸酱臊子", "image": "https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?w=400&q=80" },
+                        { "title": "红烧肉的量子态", "image": "https://images.unsplash.com/photo-1526318896980-cf78c088618c?w=400&q=80" }
+                    ],
+                    "牛": [
+                        { "title": "黑椒牛肉的熵增", "image": "https://images.unsplash.com/photo-1504973960431-1c467e159aa4?w=400&q=80" }
+                    ],
+                    "鸡": [
+                        { "title": "宫保鸡丁的离散数学", "image": "https://images.unsplash.com/photo-1569058242253-92a9c755a0ec?w=400&q=80" }
+                    ],
+                    "蔬菜": [
+                        { "title": "麻婆豆腐的相变", "image": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80" },
+                        { "title": "清炒时蔬的极简主义", "image": "https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=400&q=80" }
+                    ],
+                    "羊": []
+                }
+            },
+            listening: [
+                { "title": "可能是夜晚", "artist": "陈粒" },
+                { "title": "Reflections", "artist": "Nils Frahm" },
+                { "title": "Arrival of the Birds", "artist": "The Cinematic Orchestra" },
+                { "title": "春风十里", "artist": "鹿先森乐队" },
+                { "title": "Mad World", "artist": "Gary Jules" },
+                { "title": "River Flows in You", "artist": "Yiruma" },
+                { "title": "大风吹", "artist": "草东没有派对" },
+                { "title": "Comptine d'un autre été", "artist": "Yann Tiersen" },
+                { "title": "理想三旬", "artist": "陈鸿宇" },
+                { "title": "Nuvole Bianche", "artist": "Ludovico Einaudi" }
+            ]
+        };
+        
+        // 加载页面函数
+        function loadPage(pageName) {
+            const content = document.getElementById('content');
+            
+            // 更新导航激活状态
+            document.querySelectorAll('#navbar span').forEach(span => {
+                span.classList.remove('active');
+                if (span.getAttribute('data-page') === pageName) {
+                    span.classList.add('active');
+                }
+            });
+            
+            // 淡出效果
+            content.style.opacity = '0';
+            
+            setTimeout(() => {
+                // 模拟异步加载
+                const data = mockData[pageName];
+                
+                if (pageName === 'kazhi') {
+                    renderKazhi(data);
+                } else if (pageName === 'say') {
+                    renderSay(data);
+                } else if (pageName === 'cooking') {
+                    renderCooking(data);
+                } else if (pageName === 'listening') {
+                    renderListening(data);
+                }
+                
+                // 淡入效果
+                setTimeout(() => {
+                    content.style.opacity = '1';
+                }, 50);
+            }, 300);
+        }
+        
+        // 渲染咔滋页面
+        function renderKazhi(data) {
+            const content = document.getElementById('content');
+            const random = data[Math.floor(Math.random() * data.length)];
+            
+            content.innerHTML = `
+                <div class="kazhi-container">
+                    <img src="${random.image}" alt="蘑菇" />
+                    <p class="kazhi-text">${random.text}</p>
+                </div>
+            `;
+        }
+        
+        // 渲染咔言咔语页面
+        function renderSay(data) {
+            const content = document.getElementById('content');
+            let html = '<div class="say-container">';
+            
+            Object.keys(data).forEach((category, index) => {
+                html += `
+                    <div class="category-section">
+                        <h3 class="category-title" onclick="toggleCategory(this)">
+                            ${category}
+                        </h3>
+                        <div class="category-content">
+                `;
+                
+                data[category].forEach(item => {
+                    html += `<p class="say-item">${item}</p>`;
+                });
+                
+                html += '</div></div>';
+            });
+            
+            html += '</div>';
+            content.innerHTML = html;
+        }
+        
+        // 切换分类显示/隐藏
+        function toggleCategory(element) {
+            const content = element.nextElementSibling;
+            const isOpen = content.classList.contains('open');
+            
+            // 关闭所有其他分类
+            document.querySelectorAll('.category-content').forEach(el => {
+                el.classList.remove('open');
+            });
+            
+            // 切换当前分类
+            if (!isOpen) {
+                content.classList.add('open');
+            }
+        }
+        
+        // 渲染Deep Cooking页面
+        function renderCooking(data) {
+            const content = document.getElementById('content');
+            let html = '<div class="cooking-container">';
+            
+            html += `<p class="philosophy">${data.philosophy}</p>`;
+            
+            Object.keys(data.recipes).forEach(category => {
+                if (data.recipes[category].length > 0) {
+                    html += `<div class="recipe-category">
+                        <h3 class="recipe-category-title">${category}</h3>
+                        <div class="recipe-list">`;
+                    
+                    data.recipes[category].forEach(recipe => {
+                        html += `
+                            <div class="recipe-item">
+                                <img src="${recipe.image}" alt="${recipe.title}" />
+                                <span class="recipe-title">${recipe.title}</span>
+                            </div>
+                        `;
+                    });
+                    
+                    html += '</div></div>';
+                }
+            });
+            
+            html += '</div>';
+            content.innerHTML = html;
+        }
+        
+        // 渲染Deep Listening页面
+        function renderListening(data) {
+            const content = document.getElementById('content');
+            let html = '<div class="listening-container"><ul class="song-list">';
+            
+            data.forEach(song => {
+                html += `
+                    <li class="song-item">
+                        <span class="song-title">${song.title}</span>
+                        <span class="song-artist">${song.artist}</span>
+                    </li>
+                `;
+            });
+            
+            html += '</ul></div>';
+            content.innerHTML = html;
+        }
+        
+        // 实际部署时使用的fetch函数
+        function loadPageWithFetch(pageName) {
+            const content = document.getElementById('content');
+            
+            // 更新导航激活状态
+            document.querySelectorAll('#navbar span').forEach(span => {
+                span.classList.remove('active');
+                if (span.getAttribute('data-page') === pageName) {
+                    span.classList.add('active');
+                }
+            });
+            
+            content.style.opacity = '0';
+            
+            fetch(`data/${pageName}.json`)
+                .then(response => response.json())
+                .then(data => {
+                    setTimeout(() => {
+                        if (pageName === 'kazhi') {
+                            renderKazhi(data);
+                        } else if (pageName === 'say') {
+                            renderSay(data);
+                        } else if (pageName === 'cooking') {
+                            renderCooking(data);
+                        } else if (pageName === 'listening') {
+                            renderListening(data);
+                        }
+                        
+                        setTimeout(() => {
+                            content.style.opacity = '1';
+                        }, 50);
+                    }, 300);
+                })
+                .catch(error => {
+                    console.error('Error loading page:', error);
+                    content.innerHTML = '<p class="error">页面加载失败</p>';
+                    content.style.opacity = '1';
+                });
+        }
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 绑定导航点击事件
+            document.querySelectorAll('#navbar span').forEach(item => {
+                item.onclick = () => {
+                    // loadPage(item.getAttribute('data-page'));
+                    loadPageWithFetch(item.getAttribute('data-page'));
+                };
+            });
+            
+            // 默认加载咔滋页面
+            // loadPage('kazhi');
+            loadPageWithFetch('kazhi');
+        });
+    </script>
+</body>
+</html>
