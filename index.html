@@ -123,18 +123,241 @@
         }
         
         // 渲染咔滋页面
+        // function renderKazhi(data) {
+        //     const content = document.getElementById('content');
+        //     const random = data[Math.floor(Math.random() * data.length)];
+            
+        //     content.innerHTML = `
+        //         <div class="kazhi-container">
+        //             <img src="${random.image}" alt="蘑菇" />
+        //             <p class="kazhi-text">${random.text}</p>
+        //         </div>
+        //     `;
+        // }
+
+        // // Bing 壁纸 API 配置
+        // const bingWallpaperAPIs = {
+        //     // 主 API
+        //     primary: {
+        //         today: 'https://bing.biturl.top/?resolution=1920&format=json&index=0&mkt=zh-CN',
+        //         random: 'https://bing.biturl.top/?resolution=1920&format=json&index=random&mkt=zh-CN',
+        //         direct: 'https://bing.biturl.top/?resolution=1920&index=random'  // 直接返回图片
+        //     },
+        //     // 备用 API
+        //     backup: [
+        //         'https://api.dujin.org/bing/1920.php',
+        //         'https://bing.img.run/1920x1080.php',
+        //         'https://api.paugram.com/wallpaper/',
+        //         'https://api.oneneko.com/v1/bing_today'
+        //     ]
+        // };
+
+        // // 获取壁纸 URL
+        // async function getBingWallpaper(isRandom = false) {
+        //     try {
+        //         // 尝试使用主 API（JSON 格式）
+        //         const url = isRandom ? bingWallpaperAPIs.primary.random : bingWallpaperAPIs.primary.today;
+        //         const response = await fetch(url);
+                
+        //         if (response.ok) {
+        //             const data = await response.json();
+        //             if (data && data.url) {
+        //                 return data.url;
+        //             }
+        //         }
+        //     } catch (error) {
+        //         console.log('主 API 请求失败，尝试备用方案');
+        //     }
+            
+        //     // 如果主 API 失败，返回直接图片 URL
+        //     if (isRandom) {
+        //         return bingWallpaperAPIs.primary.direct;
+        //     } else {
+        //         // 今日壁纸备用
+        //         return bingWallpaperAPIs.backup[0];
+        //     }
+        // }
+
+        // // 渲染咔滋页面（增强版）
+        // function renderKazhi(data) {
+        //     const content = document.getElementById('content');
+        //     const randomText = data[Math.floor(Math.random() * data.length)];
+            
+        //     // 检查是否是今天第一次访问
+        //     const today = new Date().toDateString();
+        //     const lastVisit = sessionStorage.getItem('lastVisitDate');
+        //     const visitCount = parseInt(sessionStorage.getItem('visitCount') || '0');
+        //     const isFirstVisitToday = lastVisit !== today;
+            
+        //     // 更新访问记录
+        //     if (isFirstVisitToday) {
+        //         sessionStorage.setItem('lastVisitDate', today);
+        //         sessionStorage.setItem('visitCount', '1');
+        //     } else {
+        //         sessionStorage.setItem('visitCount', (visitCount + 1).toString());
+        //     }
+            
+        //     // 创建容器
+        //     content.innerHTML = `
+        //         <div class="kazhi-container">
+        //             <div class="image-container">
+        //                 <div class="image-loading">加载中...</div>
+        //                 <img id="bingImage" alt="每日壁纸" style="display: none;" />
+        //                 <div class="image-overlay"></div>
+        //             </div>
+        //             <p class="kazhi-text">${randomText.text}</p>
+                    
+        //         </div>
+        //     `;
+            
+        //     // 异步加载图片
+        //     const img = document.getElementById('bingImage');
+        //     const loadingDiv = document.querySelector('.image-loading');
+            
+        //     // 第一次访问显示今日壁纸，之后显示随机壁纸
+        //     getBingWallpaper(visitCount > 1).then(imageUrl => {
+        //         img.onload = function() {
+        //             loadingDiv.style.display = 'none';
+        //             img.style.display = 'block';
+        //         };
+                
+        //         img.onerror = function() {
+        //             // 如果 Bing API 失败，使用备用图片
+        //             console.log('Bing API 加载失败，使用备用图片');
+        //             this.src = randomText.image || 'https://source.unsplash.com/1920x1080/?nature,mushroom';
+        //         };
+                
+        //         img.src = imageUrl;
+        //     }).catch(error => {
+        //         // 直接使用备用 URL
+        //         img.src = bingWallpaperAPIs.primary.direct;
+        //         img.onload = function() {
+        //             loadingDiv.style.display = 'none';
+        //             img.style.display = 'block';
+        //         };
+        //     });
+        // }
+        
+        // 高清 Bing 壁纸 API 配置
+        const bingWallpaperAPIs = {
+            // 主 API - 使用最高分辨率
+            primary: {
+                // UHD 4K 分辨率
+                today: 'https://bing.biturl.top/?resolution=UHD&format=json&index=0&mkt=zh-CN',
+                random: 'https://bing.biturl.top/?resolution=UHD&format=json&index=random&mkt=zh-CN',
+                directUHD: 'https://bing.biturl.top/?resolution=UHD&index=random',  // 4K 直接图片
+                direct1920: 'https://bing.biturl.top/?resolution=1920&index=random'  // 1920 备用
+            },
+            // 备用高清 API
+            backup: [
+                'https://api.dujin.org/bing/1920.php',
+                'https://bing.img.run/uhd.php',  // 超高清
+                'https://source.unsplash.com/3840x2160/?nature,landscape',  // 4K Unsplash
+                'https://picsum.photos/3840/2160'  // Lorem Picsum 4K
+            ]
+        };
+
+        // 获取高清壁纸 URL
+        async function getBingWallpaper(isRandom = false) {
+            try {
+                // 尝试获取 UHD 超高清壁纸
+                const url = isRandom ? bingWallpaperAPIs.primary.random : bingWallpaperAPIs.primary.today;
+                const response = await fetch(url);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && data.url) {
+                        // 确保获取原始高清图片
+                        let hdUrl = data.url;
+                        // 如果 URL 包含分辨率参数，替换为最高分辨率
+                        if (hdUrl.includes('1920x1080')) {
+                            hdUrl = hdUrl.replace('1920x1080', 'UHD');
+                        }
+                        if (hdUrl.includes('1920x1200')) {
+                            hdUrl = hdUrl.replace('1920x1200', '3840x2160');
+                        }
+                        
+                        return hdUrl;
+                    }
+                }
+            } catch (error) {
+                console.log('主 API 请求失败，尝试备用方案');
+            }
+            
+            // 返回 4K 直接图片 URL
+            return isRandom ? bingWallpaperAPIs.primary.directUHD : bingWallpaperAPIs.backup[0];
+        }
+
+        // 渲染咔滋页面 - 优化版
         function renderKazhi(data) {
             const content = document.getElementById('content');
-            const random = data[Math.floor(Math.random() * data.length)];
+            const randomText = data[Math.floor(Math.random() * data.length)];
             
+            // 检查是否是今天第一次访问
+            const today = new Date().toDateString();
+            const lastVisit = sessionStorage.getItem('lastVisitDate');
+            const visitCount = parseInt(sessionStorage.getItem('visitCount') || '0');
+            const isFirstVisitToday = lastVisit !== today;
+            
+            // 更新访问记录
+            if (isFirstVisitToday) {
+                sessionStorage.setItem('lastVisitDate', today);
+                sessionStorage.setItem('visitCount', '1');
+            } else {
+                sessionStorage.setItem('visitCount', (visitCount + 1).toString());
+            }
+            
+            // 创建容器 - 全屏显示
             content.innerHTML = `
                 <div class="kazhi-container">
-                    <img src="${random.image}" alt="蘑菇" />
-                    <p class="kazhi-text">${random.text}</p>
+                    <div class="image-container fullscreen">
+                        <div class="image-loading">正在加载高清壁纸...</div>
+                        <img id="bingImage" 
+                            alt="每日壁纸" 
+                            style="display: none;"
+                            loading="eager"
+                            decoding="async" />
+                        <div class="image-overlay"></div>
+                    </div>
+                    <p class="kazhi-text">${randomText.text}</p>
                 </div>
             `;
+            
+            const img = document.getElementById('bingImage');
+            const loadingDiv = document.querySelector('.image-loading');
+            
+            // 预加载图片以获得更好的性能
+            const preloadImage = new Image();
+            
+            getBingWallpaper(visitCount > 1).then(imageUrl => {
+                preloadImage.onload = function() {
+                    img.src = this.src;
+                    loadingDiv.style.display = 'none';
+                    img.style.display = 'block';
+                    
+                    // 添加加载完成的动画
+                    img.classList.add('loaded');
+                };
+                
+                preloadImage.onerror = function() {
+                    console.log('高清图片加载失败，尝试备用源');
+                    // 降级到 1920 分辨率
+                    preloadImage.src = bingWallpaperAPIs.primary.direct1920;
+                };
+                
+                // 开始加载高清图片
+                preloadImage.src = imageUrl;
+            }).catch(error => {
+                // 使用备用高清源
+                preloadImage.src = bingWallpaperAPIs.backup[2]; // Unsplash 4K
+                preloadImage.onload = function() {
+                    img.src = this.src;
+                    loadingDiv.style.display = 'none';
+                    img.style.display = 'block';
+                    img.classList.add('loaded');
+                };
+            });
         }
-        
         // 渲染咔言咔语页面
         function renderSay(data) {
             const content = document.getElementById('content');

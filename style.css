@@ -53,25 +53,124 @@ body {
 }
 
 /* 咔滋页面 */
+/* 咔滋页面 - 高清大图优化 */
 .kazhi-container {
     text-align: center;
+    position: relative;
+    margin: -60px -20px 0;  /* 扩展到全宽 */
+}
+
+.image-container {
+    position: relative;
+    overflow: hidden;
+    background: #f0f0f0;
+}
+
+.image-container.fullscreen {
+    width: 100vw;
+    height: 75vh;  /* 占据 75% 视口高度 */
+    min-height: 500px;
+    max-height: 900px;
+    margin-left: calc(-50vw + 50%);
+    margin-right: calc(-50vw + 50%);
 }
 
 .kazhi-container img {
     width: 100%;
-    max-width: 600px;
-    height: auto;
-    margin-bottom: 40px;
+    height: 100%;
+    object-fit: cover;  /* 保持比例填充 */
+    object-position: center;
+    opacity: 0;
+    transition: opacity 1.2s ease;
+    /* 提升图片渲染质量 */
+    image-rendering: high-quality;
+    image-rendering: -webkit-optimize-contrast;
+    -ms-interpolation-mode: bicubic;
+}
+
+.kazhi-container img.loaded {
     opacity: 0.95;
 }
 
-.kazhi-text {
-    font-size: 20px;
-    color: #555;
-    font-weight: 300;
-    letter-spacing: 1px;
-    line-height: 2;
+.image-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(to bottom, 
+        transparent 0%, 
+        transparent 60%, 
+        rgba(245, 245, 245, 0.2) 80%, 
+        rgba(245, 245, 245, 0.5) 100%);
+    pointer-events: none;
 }
+
+.image-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #999;
+    font-size: 14px;
+    letter-spacing: 2px;
+    z-index: 1;
+}
+
+.kazhi-text {
+    font-size: 22px;
+    color: #444;
+    font-weight: 300;
+    letter-spacing: 1.5px;
+    line-height: 2;
+    margin: 60px auto;
+    max-width: 800px;
+    padding: 0 40px;
+}
+
+/* 大屏幕优化 */
+@media (min-width: 1920px) {
+    .image-container.fullscreen {
+        height: 80vh;
+        max-height: 1200px;
+    }
+    
+    .kazhi-text {
+        font-size: 24px;
+    }
+}
+
+/* 4K 屏幕优化 */
+@media (min-width: 2560px) {
+    .image-container.fullscreen {
+        height: 85vh;
+        max-height: 1600px;
+    }
+    
+    .kazhi-text {
+        font-size: 26px;
+        max-width: 1000px;
+    }
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+    .kazhi-container {
+        margin: -40px -20px 0;
+    }
+    
+    .image-container.fullscreen {
+        height: 50vh;
+        min-height: 300px;
+    }
+    
+    .kazhi-text {
+        font-size: 18px;
+        margin: 40px auto;
+        padding: 0 20px;
+    }
+}
+
 
 /* 咔言咔语页面 */
 .say-container {
@@ -296,3 +395,4 @@ body {
     font-size: 16px;
     padding: 50px 0;
 }
+
