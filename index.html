@@ -399,7 +399,7 @@
                 .replace(/[​\u200B-\u200D\uFEFF]/g, '') // 移除零宽字符
                 .replace(/\s+/g, ' ') // 合并多个空格
                 .trim()
-                .substring(0, 120) + (text.length > 120 ? '...' : ''); // 限制长度
+                .substring(0, 520) + (text.length > 520 ? '...' : ''); // 限制长度
         }
 
         // 格式化日期显示
