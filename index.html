@@ -18,6 +18,15 @@
     </nav>
     
     <div id="content"></div>
+
+    <!-- 详细内容弹窗 - 仅用于咔言咔语页面 -->
+    <div class="detail-overlay" id="detailOverlay">
+        <div class="detail-content">
+            <button class="close-btn" onclick="closeDetail()">&times;</button>
+            <h2 class="detail-title" id="detailTitle"></h2>
+            <div id="detailBody"></div>
+        </div>
+    </div>
     
     <script>
         // 模拟数据 - 实际部署时应从服务器加载
@@ -50,6 +59,31 @@
                     "Debug 就像考古，每个 bug 都有它的历史",
                     "好的架构像诗歌，简洁而富有表达力",
                     "重构代码就像整理房间，让未来的自己感谢现在"
+                ],
+                "Food": [
+                    "每一次下厨都是对味觉记忆的重构",
+                    "调料的比例就像代码的逻辑，需要精确和直觉并存",
+                    "厨房是最朴素的实验室"
+                ],
+                "Nature": [
+                    "森林教会我什么是真正的网络结构",
+                    "每一片落叶都在讲述时间的故事",
+                    "风是树之间最温柔的对话"
+                ],
+                "Reading": [
+                    "好书如林中小径，总能引向意想不到的风景",
+                    "文字是思想最精确的容器",
+                    "阅读是与古今智者的深度对话"
+                ],
+                "Music": [
+                    "音符是时间的DNA",
+                    "每首歌都承载着一个完整的情感宇宙",
+                    "静默也是音乐的一部分"
+                ],
+                "Code": [
+                    "优雅的代码如同诗歌，简洁而富有表达力",
+                    "每个函数都应该有单一而明确的使命",
+                    "重构是对过去自己最好的致敬"
                 ]
             },
             cooking: {
@@ -85,7 +119,12 @@
                 { "title": "Nuvole Bianche", "artist": "Ludovico Einaudi" }
             ]
         };
+
+        // 咔言咔语页面的9宫格内容数据 - 从JSON文件读取后转换
+        let sayContentData = {};
+
         let weiboData = { weibo: [] };
+
         // 加载页面函数
         function loadPage(pageName) {
             const content = document.getElementById('content');
@@ -108,7 +147,7 @@
                 if (pageName === 'kazhi') {
                     renderKazhi(data);
                 } else if (pageName === 'say') {
-                    renderSay(data);
+                    renderSayGrid(data); // 使用9宫格版本
                 } else if (pageName === 'cooking') {
                     renderCooking(data);
                 } else if (pageName === 'listening') {
@@ -121,232 +160,6 @@
                 }, 50);
             }, 300);
         }
-    
-
-        // // Bing 壁纸 API 配置
-        // const bingWallpaperAPIs = {
-        //     // 主 API
-        //     primary: {
-        //         today: 'https://bing.biturl.top/?resolution=1920&format=json&index=0&mkt=zh-CN',
-        //         random: 'https://bing.biturl.top/?resolution=1920&format=json&index=random&mkt=zh-CN',
-        //         direct: 'https://bing.biturl.top/?resolution=1920&index=random'  // 直接返回图片
-        //     },
-        //     // 备用 API
-        //     backup: [
-        //         'https://api.dujin.org/bing/1920.php',
-        //         'https://bing.img.run/1920x1080.php',
-        //         'https://api.paugram.com/wallpaper/',
-        //         'https://api.oneneko.com/v1/bing_today'
-        //     ]
-        // };
-
-        // // 获取壁纸 URL
-        // async function getBingWallpaper(isRandom = false) {
-        //     try {
-        //         // 尝试使用主 API（JSON 格式）
-        //         const url = isRandom ? bingWallpaperAPIs.primary.random : bingWallpaperAPIs.primary.today;
-        //         const response = await fetch(url);
-                
-        //         if (response.ok) {
-        //             const data = await response.json();
-        //             if (data && data.url) {
-        //                 return data.url;
-        //             }
-        //         }
-        //     } catch (error) {
-        //         console.log('主 API 请求失败，尝试备用方案');
-        //     }
-            
-        //     // 如果主 API 失败，返回直接图片 URL
-        //     if (isRandom) {
-        //         return bingWallpaperAPIs.primary.direct;
-        //     } else {
-        //         // 今日壁纸备用
-        //         return bingWallpaperAPIs.backup[0];
-        //     }
-        // }
-
-        // // 渲染咔滋页面（增强版）
-        // function renderKazhi(data) {
-        //     const content = document.getElementById('content');
-        //     const randomText = data[Math.floor(Math.random() * data.length)];
-            
-        //     // 检查是否是今天第一次访问
-        //     const today = new Date().toDateString();
-        //     const lastVisit = sessionStorage.getItem('lastVisitDate');
-        //     const visitCount = parseInt(sessionStorage.getItem('visitCount') || '0');
-        //     const isFirstVisitToday = lastVisit !== today;
-            
-        //     // 更新访问记录
-        //     if (isFirstVisitToday) {
-        //         sessionStorage.setItem('lastVisitDate', today);
-        //         sessionStorage.setItem('visitCount', '1');
-        //     } else {
-        //         sessionStorage.setItem('visitCount', (visitCount + 1).toString());
-        //     }
-            
-        //     // 创建容器
-        //     content.innerHTML = `
-        //         <div class="kazhi-container">
-        //             <div class="image-container">
-        //                 <div class="image-loading">加载中...</div>
-        //                 <img id="bingImage" alt="每日壁纸" style="display: none;" />
-        //                 <div class="image-overlay"></div>
-        //             </div>
-        //             <p class="kazhi-text">${randomText.text}</p>
-                    
-        //         </div>
-        //     `;
-            
-        //     // 异步加载图片
-        //     const img = document.getElementById('bingImage');
-        //     const loadingDiv = document.querySelector('.image-loading');
-            
-        //     // 第一次访问显示今日壁纸，之后显示随机壁纸
-        //     getBingWallpaper(visitCount > 1).then(imageUrl => {
-        //         img.onload = function() {
-        //             loadingDiv.style.display = 'none';
-        //             img.style.display = 'block';
-        //         };
-                
-        //         img.onerror = function() {
-        //             // 如果 Bing API 失败，使用备用图片
-        //             console.log('Bing API 加载失败，使用备用图片');
-        //             this.src = randomText.image || 'https://source.unsplash.com/1920x1080/?nature,mushroom';
-        //         };
-                
-        //         img.src = imageUrl;
-        //     }).catch(error => {
-        //         // 直接使用备用 URL
-        //         img.src = bingWallpaperAPIs.primary.direct;
-        //         img.onload = function() {
-        //             loadingDiv.style.display = 'none';
-        //             img.style.display = 'block';
-        //         };
-        //     });
-        // }
-        
-        // 高清 Bing 壁纸 API 配置
-        const bingWallpaperAPIs = {
-            // 主 API - 使用最高分辨率
-            primary: {
-                // UHD 4K 分辨率
-                today: 'https://bing.biturl.top/?resolution=UHD&format=json&index=0&mkt=zh-CN',
-                random: 'https://bing.biturl.top/?resolution=UHD&format=json&index=random&mkt=zh-CN',
-                directUHD: 'https://bing.biturl.top/?resolution=UHD&index=random',  // 4K 直接图片
-                direct1920: 'https://bing.biturl.top/?resolution=1920&index=random'  // 1920 备用
-            },
-            // 备用高清 API
-            backup: [
-                'https://api.dujin.org/bing/1920.php',
-                'https://bing.img.run/uhd.php',  // 超高清
-                'https://source.unsplash.com/3840x2160/?nature,landscape',  // 4K Unsplash
-                'https://picsum.photos/3840/2160'  // Lorem Picsum 4K
-            ]
-        };
-
-        // 获取高清壁纸 URL
-        async function getBingWallpaper(isRandom = false) {
-            try {
-                // 尝试获取 UHD 超高清壁纸
-                const url = isRandom ? bingWallpaperAPIs.primary.random : bingWallpaperAPIs.primary.today;
-                const response = await fetch(url);
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data && data.url) {
-                        // 确保获取原始高清图片
-                        let hdUrl = data.url;
-                        // 如果 URL 包含分辨率参数，替换为最高分辨率
-                        if (hdUrl.includes('1920x1080')) {
-                            hdUrl = hdUrl.replace('1920x1080', 'UHD');
-                        }
-                        if (hdUrl.includes('1920x1200')) {
-                            hdUrl = hdUrl.replace('1920x1200', '3840x2160');
-                        }
-                        
-                        return hdUrl;
-                    }
-                }
-            } catch (error) {
-                console.log('主 API 请求失败，尝试备用方案');
-            }
-            
-            // 返回 4K 直接图片 URL
-            return isRandom ? bingWallpaperAPIs.primary.directUHD : bingWallpaperAPIs.backup[0];
-        }
-
-        // 渲染咔滋页面 - 优化版
-        function renderKazhi_img(data) {
-            const content = document.getElementById('content');
-            const randomText = data[Math.floor(Math.random() * data.length)];
-            
-            // 检查是否是今天第一次访问
-            const today = new Date().toDateString();
-            const lastVisit = sessionStorage.getItem('lastVisitDate');
-            const visitCount = parseInt(sessionStorage.getItem('visitCount') || '0');
-            const isFirstVisitToday = lastVisit !== today;
-            
-            // 更新访问记录
-            if (isFirstVisitToday) {
-                sessionStorage.setItem('lastVisitDate', today);
-                sessionStorage.setItem('visitCount', '1');
-            } else {
-                sessionStorage.setItem('visitCount', (visitCount + 1).toString());
-            }
-            
-            // 创建容器 - 全屏显示
-            content.innerHTML = `
-                <div class="kazhi-container">
-                    <div class="image-container fullscreen">
-                        <div class="image-loading">正在加载高清壁纸...</div>
-                        <img id="bingImage" 
-                            alt="每日壁纸" 
-                            style="display: none;"
-                            loading="eager"
-                            decoding="async" />
-                        <div class="image-overlay"></div>
-                    </div>
-                    <p class="kazhi-text">${randomText.text}</p>
-                </div>
-            `;
-            
-            const img = document.getElementById('bingImage');
-            const loadingDiv = document.querySelector('.image-loading');
-            
-            // 预加载图片以获得更好的性能
-            const preloadImage = new Image();
-            
-            getBingWallpaper(visitCount > 1).then(imageUrl => {
-                preloadImage.onload = function() {
-                    img.src = this.src;
-                    loadingDiv.style.display = 'none';
-                    img.style.display = 'block';
-                    
-                    // 添加加载完成的动画
-                    img.classList.add('loaded');
-                };
-                
-                preloadImage.onerror = function() {
-                    console.log('高清图片加载失败，尝试备用源');
-                    // 降级到 1920 分辨率
-                    preloadImage.src = bingWallpaperAPIs.primary.direct1920;
-                };
-                
-                // 开始加载高清图片
-                preloadImage.src = imageUrl;
-            }).catch(error => {
-                // 使用备用高清源
-                preloadImage.src = bingWallpaperAPIs.backup[2]; // Unsplash 4K
-                preloadImage.onload = function() {
-                    img.src = this.src;
-                    loadingDiv.style.display = 'none';
-                    img.style.display = 'block';
-                    img.classList.add('loaded');
-                };
-            });
-        }
-
 
         // 修改这两个函数，直接使用传入的data
         function getLastYearTodayWeibo(data) {
@@ -392,6 +205,7 @@
         function parseWeiboDate(dateStr) {
             return new Date(dateStr);
         }
+
         // 格式化微博文本，去掉多余的符号和换行
         function formatWeiboText(text) {
             return text
@@ -429,8 +243,9 @@
             // 根据访问次数选择微博
             let selectedWeibo;
             let isLastYearToday = false;
+            const currentVisitCount = parseInt(sessionStorage.getItem('visitCount'));
             
-            if (visitCount === 1) {
+            if (currentVisitCount === 1) {
                 selectedWeibo = getLastYearTodayWeibo(data);
                 isLastYearToday = true;
             } else {
@@ -451,49 +266,165 @@
             `;
         }
 
+        // 新增：从JSON数据转换为9宫格格式
+        function convertSayDataToGrid(jsonData) {
+            const categoryMapping = {
+                'Philosophy': { key: 'philosophy', title: '哲思' },
+                'Travel': { key: 'travel', title: '行走' },
+                'Life': { key: 'life', title: '日常' },
+                'Tech': { key: 'tech', title: '代码' },
+                'Food': { key: 'food', title: '食物' },
+                'Nature': { key: 'nature', title: '自然' }
+            };
 
+            const result = {};
+            
+            Object.keys(categoryMapping).forEach(jsonKey => {
+                if (jsonData[jsonKey]) {
+                    const mapping = categoryMapping[jsonKey];
+                    result[mapping.key] = {
+                        title: mapping.title,
+                        description: jsonData[jsonKey][0], // 使用第一条作为描述
+                        items: jsonData[jsonKey]
+                    };
+                }
+            });
 
-        // 渲染咔言咔语页面
-        function renderSay(data) {
+            return result;
+        }
+
+        // 新增：渲染咔言咔语页面为9宫格
+        function renderSayGrid(jsonData) {
             const content = document.getElementById('content');
-            let html = '<div class="say-container">';
             
-            Object.keys(data).forEach((category, index) => {
-                html += `
-                    <div class="category-section">
-                        <h3 class="category-title" onclick="toggleCategory(this)">
-                            ${category}
-                        </h3>
-                        <div class="category-content">
-                `;
-                
-                data[category].forEach(item => {
-                    html += `<p class="say-item">${item}</p>`;
+            // 转换数据格式并更新全局变量
+            sayContentData = convertSayDataToGrid(jsonData);
+            
+            content.innerHTML = `
+                <div class="grid-container">
+                    <div class="card" data-content="philosophy">
+                        <div class="card-face card-front"></div>
+                        <div class="card-face card-back">
+                            <h3 class="card-title">哲思</h3>
+                            <p class="card-description">感情像神经网络，训练过拟合就难以泛化</p>
+                        </div>
+                    </div>
+
+                    <div class="card" data-content="travel">
+                        <div class="card-face card-front"></div>
+                        <div class="card-face card-back">
+                            <h3 class="card-title">行走</h3>
+                            <p class="card-description">在旧金山烈日下喝冰美式是人类学意义的一种幸福</p>
+                        </div>
+                    </div>
+
+                    <div class="card" data-content="life">
+                        <div class="card-face card-front"></div>
+                        <div class="card-face card-back">
+                            <h3 class="card-title">日常</h3>
+                            <p class="card-description">做饭是我与混沌系统对话的方式</p>
+                        </div>
+                    </div>
+
+                    <div class="card" data-content="tech">
+                        <div class="card-face card-front"></div>
+                        <div class="card-face card-back">
+                            <h3 class="card-title">代码</h3>
+                            <p class="card-description">Debug 就像考古，每个 bug 都有它的历史</p>
+                        </div>
+                    </div>
+
+                    <div class="card" data-content="food">
+                        <div class="card-face card-front"></div>
+                        <div class="card-face card-back">
+                            <h3 class="card-title">食物</h3>
+                            <p class="card-description">火候是一个连续变量，调料是离散选择</p>
+                        </div>
+                    </div>
+
+                    <div class="card" data-content="nature">
+                        <div class="card-face card-front"></div>
+                        <div class="card-face card-back">
+                            <h3 class="card-title">自然</h3>
+                            <p class="card-description">树的分形结构是自然界最优雅的算法</p>
+                        </div>
+                    </div>
+
+                    <div class="card empty-card">
+                        <div class="card-face card-front"></div>
+                        <div class="card-face card-back">
+                            <h3 class="card-title">·</h3>
+                            <p class="card-description">留白也是一种表达</p>
+                        </div>
+                    </div>
+
+                    <div class="card empty-card">
+                        <div class="card-face card-front"></div>
+                        <div class="card-face card-back">
+                            <h3 class="card-title">·</h3>
+                            <p class="card-description">静默胜过千言</p>
+                        </div>
+                    </div>
+
+                    <div class="card empty-card">
+                        <div class="card-face card-front"></div>
+                        <div class="card-face card-back">
+                            <h3 class="card-title">·</h3>
+                            <p class="card-description">空即是色</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // 为卡片添加点击事件
+            setTimeout(() => {
+                document.querySelectorAll('.card:not(.empty-card)').forEach(card => {
+                    card.addEventListener('click', function() {
+                        this.classList.add('clicked');
+                        setTimeout(() => {
+                            const contentType = this.getAttribute('data-content');
+                            showDetail(contentType);
+                            this.classList.remove('clicked');
+                        }, 200);
+                    });
                 });
-                
-                html += '</div></div>';
-            });
-            
-            html += '</div>';
-            content.innerHTML = html;
+            }, 100);
         }
-        
-        // 切换分类显示/隐藏
-        function toggleCategory(element) {
-            const content = element.nextElementSibling;
-            const isOpen = content.classList.contains('open');
+
+        // 显示详情弹窗
+        function showDetail(type) {
+            const overlay = document.getElementById('detailOverlay');
+            const title = document.getElementById('detailTitle');
+            const body = document.getElementById('detailBody');
             
-            // 关闭所有其他分类
-            document.querySelectorAll('.category-content').forEach(el => {
-                el.classList.remove('open');
+            const data = sayContentData[type];
+            if (!data) return; // 如果没有数据则不显示
+            
+            title.textContent = data.title;
+            
+            let bodyHTML = '<div class="content-section">';
+            bodyHTML += '<h3 class="section-title">思绪片段</h3>';
+            data.items.forEach(item => {
+                bodyHTML += `<div class="content-item">${item}</div>`;
             });
+            bodyHTML += '</div>';
             
-            // 切换当前分类
-            if (!isOpen) {
-                content.classList.add('open');
-            }
+            body.innerHTML = bodyHTML;
+            overlay.classList.add('active');
+            
+            // 防止背景滚动
+            document.body.style.overflow = 'hidden';
         }
-        
+
+        // 关闭详情弹窗
+        function closeDetail() {
+            const overlay = document.getElementById('detailOverlay');
+            overlay.classList.remove('active');
+            
+            // 恢复背景滚动
+            document.body.style.overflow = '';
+        }
+
         // 渲染Deep Cooking页面
         function renderCooking(data) {
             const content = document.getElementById('content');
@@ -524,24 +455,6 @@
             content.innerHTML = html;
         }
         
-        // 渲染Deep Listening页面
-        function renderListening_old(data) {
-            const content = document.getElementById('content');
-            let html = '<div class="listening-container"><ul class="song-list">';
-            
-            data.forEach(song => {
-                html += `
-                    <li class="song-item">
-                        <span class="song-title">${song.title}</span>
-                        <span class="song-artist">${song.artist}</span>
-                    </li>
-                `;
-            });
-            
-            html += '</ul></div>';
-            content.innerHTML = html;
-        }
-
         // 渲染Deep Listening页面 - 折叠式布局
         function renderListening(data) {
             const content = document.getElementById('content');
@@ -571,7 +484,7 @@
             content.innerHTML = html;
         }
 
-        // 切换歌单显示/隐藏 - 新增函数
+        // 切换歌单显示/隐藏
         function togglePlaylist(element) {
             const content = element.nextElementSibling;
             const isOpen = content.classList.contains('open');
@@ -586,46 +499,7 @@
                 content.classList.add('open');
             }
         }
-        
-        // 实际部署时使用的fetch函数
-        function loadPageWithFetch_old(pageName) {
-            const content = document.getElementById('content');
-            
-            // 更新导航激活状态
-            document.querySelectorAll('#navbar span').forEach(span => {
-                span.classList.remove('active');
-                if (span.getAttribute('data-page') === pageName) {
-                    span.classList.add('active');
-                }
-            });
-            
-            content.style.opacity = '0';
-            
-            fetch(`data/${pageName}.json`)
-                .then(response => response.json())
-                .then(data => {
-                    setTimeout(() => {
-                        if (pageName === 'kazhi') {
-                            renderKazhi(data);
-                        } else if (pageName === 'say') {
-                            renderSay(data);
-                        } else if (pageName === 'cooking') {
-                            renderCooking(data);
-                        } else if (pageName === 'listening') {
-                            renderListening(data);
-                        }
-                        
-                        setTimeout(() => {
-                            content.style.opacity = '1';
-                        }, 50);
-                    }, 300);
-                })
-                .catch(error => {
-                    console.error('Error loading page:', error);
-                    content.innerHTML = '<p class="error">页面加载失败</p>';
-                    content.style.opacity = '1';
-                });
-        }
+
         // 实际部署时使用的fetch函数 - 支持从JSON文件读取
         function loadPageWithFetch(pageName) {
             const content = document.getElementById('content');
@@ -640,47 +514,55 @@
             
             content.style.opacity = '0';
             
-            // 为kazhi页面特殊处理，从weibo.json读取数据
-            const dataFile = pageName === 'kazhi' ? 'weibo.json' : `${pageName}.json`;
+            // 特殊处理 kazhi 页面
+            if (pageName === 'kazhi') {
+                Promise.all([
+                    fetch('data/weibo.json').then(response => response.json()),
+                    fetch('data/weibo2.json').then(response => response.json())
+                ])
+                .then(([data1, data2]) => {
+                    // 合并两个文件的weibo数据
+                    const mergedData = {
+                        weibo: [...(data1.weibo || []), ...(data2.weibo || [])]
+                    };
+                    
+                    setTimeout(() => {
+                        // 更新全局weiboData
+                        weiboData.weibo = mergedData.weibo;
+                        renderKazhi(mergedData);
+                        
+                        // 淡入效果
+                        setTimeout(() => {
+                            content.style.opacity = '1';
+                        }, 50);
+                    }, 300);
+                })
+                .catch(error => {
+                    console.error('Error loading weibo data:', error);
+                    setTimeout(() => {
+                        content.innerHTML = '<p class="error">页面加载失败</p>';
+                        content.style.opacity = '1';
+                    }, 300);
+                });
+                return; // 提前返回，避免执行后面的通用逻辑
+            }
+            
+            // 其他页面的通用处理
+            const dataFile = `${pageName}.json`;
             
             fetch(`data/${dataFile}`)
                 .then(response => response.json())
                 .then(data => {
                     setTimeout(() => {
-                        if (pageName === 'kazhi') {
-                            Promise.all([
-                                fetch('data/weibo.json').then(response => response.json()),
-                                fetch('data/weibo2.json').then(response => response.json())
-                            ])
-                            .then(([data1, data2]) => {
-                                // 合并两个文件的weibo数据
-                                const mergedData = {
-                                    weibo: [...(data1.weibo || []), ...(data2.weibo || [])]
-                                };
-                                
-                                setTimeout(() => {
-                                    // 更新全局weiboData
-                                    weiboData.weibo = mergedData.weibo;
-                                    renderKazhi(mergedData);
-                                    
-                                    setTimeout(() => {
-                                        content.style.opacity = '1';
-                                    }, 50);
-                                }, 300);
-                            })
-                            .catch(error => {
-                                console.error('Error loading weibo data:', error);
-                                content.innerHTML = '<p class="error">页面加载失败</p>';
-                                content.style.opacity = '1';
-                            });
-                        } else if (pageName === 'say') {
-                            renderSay(data);
+                        if (pageName === 'say') {
+                            renderSayGrid(data); // 使用9宫格版本
                         } else if (pageName === 'cooking') {
                             renderCooking(data);
                         } else if (pageName === 'listening') {
                             renderListening(data);
                         }
                         
+                        // 淡入效果
                         setTimeout(() => {
                             content.style.opacity = '1';
                         }, 50);
@@ -688,8 +570,10 @@
                 })
                 .catch(error => {
                     console.error('Error loading page:', error);
-                    content.innerHTML = '<p class="error">页面加载失败</p>';
-                    content.style.opacity = '1';
+                    setTimeout(() => {
+                        content.innerHTML = '<p class="error">页面加载失败</p>';
+                        content.style.opacity = '1';
+                    }, 300);
                 });
         }
         // 初始化
@@ -697,14 +581,26 @@
             // 绑定导航点击事件
             document.querySelectorAll('#navbar span').forEach(item => {
                 item.onclick = () => {
-                    // loadPage(item.getAttribute('data-page'));
                     loadPageWithFetch(item.getAttribute('data-page'));
                 };
             });
             
             // 默认加载咔滋页面
-            // loadPage('kazhi');
             loadPageWithFetch('kazhi');
+
+            // 点击遮罩关闭详情弹窗
+            document.getElementById('detailOverlay').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeDetail();
+                }
+            });
+
+            // ESC键关闭详情弹窗
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    closeDetail();
+                }
+            });
         });
     </script>
 </body>
