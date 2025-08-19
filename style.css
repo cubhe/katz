@@ -11,7 +11,7 @@ body {
     background-color: #f5f5f5;
     color: #333;
     line-height: 1.8;
-    font-weight: 300;
+    font-weight: 400;
     min-height: 100vh;
     padding: 0 20px;
 }
@@ -27,7 +27,7 @@ body {
 #navbar span {
     font-family: 'Cormorant Garamond', serif;
     font-size: 18px;
-    font-weight: 300;
+    font-weight: 400;
     color: #888;
     cursor: pointer;
     margin: 0 30px;
@@ -119,8 +119,8 @@ body {
 
 .kazhi-text {
     font-size: 22px;
-    color: #444;
-    font-weight: 300;
+    color: #222;
+    font-weight: 400;
     letter-spacing: 1.5px;
     line-height: 2;
     margin: 60px auto;
@@ -184,8 +184,8 @@ body {
 .category-title {
     font-family: 'Cormorant Garamond', serif;
     font-size: 24px;
-    font-weight: 300;
-    color: #555;
+    font-weight: 400;
+    color: #333;
     cursor: pointer;
     padding: 15px 0;
     transition: color 300ms ease;
@@ -225,7 +225,7 @@ body {
 
 .say-item {
     font-size: 17px;
-    color: #666;
+    color: #444;
     padding: 12px 0;
     margin-left: 20px;
     border-left: 1px solid #e8e8e8;
@@ -241,7 +241,7 @@ body {
 
 .philosophy {
     font-size: 19px;
-    color: #555;
+    color: #444;
     line-height: 2;
     margin-bottom: 60px;
     padding-bottom: 40px;
@@ -257,8 +257,8 @@ body {
 .recipe-category-title {
     font-family: 'Cormorant Garamond', serif;
     font-size: 22px;
-    font-weight: 300;
-    color: #555;
+    font-weight: 400;
+    color: #444;
     margin-bottom: 30px;
     letter-spacing: 1px;
 }
@@ -284,7 +284,7 @@ body {
 
 .recipe-title {
     font-size: 17px;
-    color: #666;
+    color: #444;
     letter-spacing: 0.5px;
 }
 
