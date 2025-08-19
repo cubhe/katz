@@ -85,7 +85,7 @@
                 { "title": "Nuvole Bianche", "artist": "Ludovico Einaudi" }
             ]
         };
-        
+        let weiboData = { weibo: [] };
         // 加载页面函数
         function loadPage(pageName) {
             const content = document.getElementById('content');
@@ -121,19 +121,7 @@
                 }, 50);
             }, 300);
         }
-        
-        // 渲染咔滋页面
-        // function renderKazhi(data) {
-        //     const content = document.getElementById('content');
-        //     const random = data[Math.floor(Math.random() * data.length)];
-            
-        //     content.innerHTML = `
-        //         <div class="kazhi-container">
-        //             <img src="${random.image}" alt="蘑菇" />
-        //             <p class="kazhi-text">${random.text}</p>
-        //         </div>
-        //     `;
-        // }
+    
 
         // // Bing 壁纸 API 配置
         // const bingWallpaperAPIs = {
@@ -289,7 +277,7 @@
         }
 
         // 渲染咔滋页面 - 优化版
-        function renderKazhi(data) {
+        function renderKazhi_img(data) {
             const content = document.getElementById('content');
             const randomText = data[Math.floor(Math.random() * data.length)];
             
@@ -358,6 +346,113 @@
                 };
             });
         }
+
+
+        // 修改这两个函数，直接使用传入的data
+        function getLastYearTodayWeibo(data) {
+            const today = new Date();
+            const lastYear = today.getFullYear() - 1;
+            const targetMonth = today.getMonth() + 1;
+            const targetDay = today.getDate();
+
+            const matchingWeibos = data.weibo.filter(weibo => {
+                const weiboDate = parseWeiboDate(weibo.createdAt);
+                return weiboDate.getFullYear() === lastYear &&
+                    weiboDate.getMonth() + 1 === targetMonth &&
+                    weiboDate.getDate() === targetDay;
+            });
+
+            if (matchingWeibos.length > 0) {
+                return matchingWeibos[Math.floor(Math.random() * matchingWeibos.length)];
+            }
+
+            // 如果没有找到，返回最接近的
+            const sortedWeibos = data.weibo
+                .map(weibo => ({
+                    ...weibo,
+                    date: parseWeiboDate(weibo.createdAt)
+                }))
+                .sort((a, b) => {
+                    const aDiff = Math.abs(a.date.getMonth() - today.getMonth()) + 
+                                Math.abs(a.date.getDate() - today.getDate());
+                    const bDiff = Math.abs(b.date.getMonth() - today.getMonth()) + 
+                                Math.abs(b.date.getDate() - today.getDate());
+                    return aDiff - bDiff;
+                });
+
+            return sortedWeibos[0];
+        }
+
+        function getRandomWeibo(data) {
+            const randomIndex = Math.floor(Math.random() * data.weibo.length);
+            return data.weibo[randomIndex];
+        }
+
+        // 解析日期字符串
+        function parseWeiboDate(dateStr) {
+            return new Date(dateStr);
+        }
+        // 格式化微博文本，去掉多余的符号和换行
+        function formatWeiboText(text) {
+            return text
+                .replace(/\n/g, ' ')
+                .replace(/[​\u200B-\u200D\uFEFF]/g, '') // 移除零宽字符
+                .replace(/\s+/g, ' ') // 合并多个空格
+                .trim()
+                .substring(0, 120) + (text.length > 120 ? '...' : ''); // 限制长度
+        }
+
+        // 格式化日期显示
+        function formatDate(dateStr) {
+            const date = parseWeiboDate(dateStr);
+            return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+        }
+
+        // 渲染咔滋页面 - 纯文字版本，不使用图片
+        function renderKazhi(data) {
+            const content = document.getElementById('content');
+            
+            // 检查是否是今天第一次访问
+            const today = new Date().toDateString();
+            const lastVisit = sessionStorage.getItem('lastVisitDate');
+            const visitCount = parseInt(sessionStorage.getItem('visitCount') || '0');
+            const isFirstVisitToday = lastVisit !== today;
+            
+            // 更新访问记录
+            if (isFirstVisitToday) {
+                sessionStorage.setItem('lastVisitDate', today);
+                sessionStorage.setItem('visitCount', '1');
+            } else {
+                sessionStorage.setItem('visitCount', (visitCount + 1).toString());
+            }
+            
+            // 根据访问次数选择微博
+            let selectedWeibo;
+            let isLastYearToday = false;
+            
+            if (visitCount === 1) {
+                selectedWeibo = getLastYearTodayWeibo(data);
+                isLastYearToday = true;
+            } else {
+                selectedWeibo = getRandomWeibo(data);
+            }
+            
+            const weiboText = formatWeiboText(selectedWeibo.text);
+            const weiboDate = formatDate(selectedWeibo.createdAt);
+            
+            // 创建容器 - 纯文字版本
+            content.innerHTML = `
+                <div class="kazhi-container text-only">
+                    <div class="weibo-date">
+                        ${isLastYearToday ? '去年今日' : '随机回忆'} · ${weiboDate}
+                    </div>
+                    <p class="kazhi-text">${weiboText}</p>
+                </div>
+            `;
+        }
+
+
+
         // 渲染咔言咔语页面
         function renderSay(data) {
             const content = document.getElementById('content');
@@ -448,7 +543,7 @@
         }
         
         // 实际部署时使用的fetch函数
-        function loadPageWithFetch(pageName) {
+        function loadPageWithFetch_old(pageName) {
             const content = document.getElementById('content');
             
             // 更新导航激活状态
@@ -486,7 +581,53 @@
                     content.style.opacity = '1';
                 });
         }
-        
+        // 实际部署时使用的fetch函数 - 支持从JSON文件读取
+        function loadPageWithFetch(pageName) {
+            const content = document.getElementById('content');
+            
+            // 更新导航激活状态
+            document.querySelectorAll('#navbar span').forEach(span => {
+                span.classList.remove('active');
+                if (span.getAttribute('data-page') === pageName) {
+                    span.classList.add('active');
+                }
+            });
+            
+            content.style.opacity = '0';
+            
+            // 为kazhi页面特殊处理，从weibo.json读取数据
+            const dataFile = pageName === 'kazhi' ? 'weibo.json' : `${pageName}.json`;
+            
+            fetch(`data/${dataFile}`)
+                .then(response => response.json())
+                .then(data => {
+                    setTimeout(() => {
+                        if (pageName === 'kazhi') {
+                            // 对于kazhi页面，需要更新全局weiboData
+                            if (data.weibo) {
+                                // 替换全局微博数据
+                                weiboData.weibo = data.weibo;
+                            }
+                            renderKazhi(data);
+                        } else if (pageName === 'say') {
+                            renderSay(data);
+                        } else if (pageName === 'cooking') {
+                            renderCooking(data);
+                        } else if (pageName === 'listening') {
+                            renderListening(data);
+                        }
+                        
+                        setTimeout(() => {
+                            content.style.opacity = '1';
+                        }, 50);
+                    }, 300);
+                })
+                .catch(error => {
+                    console.error('Error loading page:', error);
+                    content.innerHTML = '<p class="error">页面加载失败</p>';
+                    content.style.opacity = '1';
+                });
+        }
         // 初始化
         document.addEventListener('DOMContentLoaded', function() {
             // 绑定导航点击事件
