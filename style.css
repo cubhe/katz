@@ -293,6 +293,52 @@ body {
     padding: 20px 0;
 }
 
+.playlist-section {
+    margin-bottom: 40px;
+}
+
+.playlist-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 24px;
+    font-weight: 400;
+    color: #333;
+    cursor: pointer;
+    padding: 15px 0;
+    transition: color 300ms ease;
+    position: relative;
+    letter-spacing: 1px;
+}
+
+.playlist-title:hover {
+    color: #333;
+}
+
+.playlist-title::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 30px;
+    height: 1px;
+    background-color: #ccc;
+    transition: width 400ms ease;
+}
+
+.playlist-title:hover::after {
+    width: 60px;
+}
+
+.playlist-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 500ms ease;
+}
+
+.playlist-content.open {
+    max-height: 2000px;
+    padding: 20px 0;
+}
+
 .song-list {
     list-style: none;
 }

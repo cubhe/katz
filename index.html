@@ -525,7 +525,7 @@
         }
         
         // 渲染Deep Listening页面
-        function renderListening(data) {
+        function renderListening_old(data) {
             const content = document.getElementById('content');
             let html = '<div class="listening-container"><ul class="song-list">';
             
@@ -540,6 +540,51 @@
             
             html += '</ul></div>';
             content.innerHTML = html;
+        }
+
+        // 渲染Deep Listening页面 - 折叠式布局
+        function renderListening(data) {
+            const content = document.getElementById('content');
+            let html = '<div class="listening-container">';
+            
+            Object.keys(data).forEach(playlistName => {
+                html += `
+                    <div class="playlist-section">
+                        <h3 class="playlist-title" onclick="togglePlaylist(this)">${playlistName}</h3>
+                        <div class="playlist-content">
+                            <ul class="song-list">
+                `;
+                
+                data[playlistName].forEach(song => {
+                    html += `
+                        <li class="song-item">
+                            <span class="song-title">${song.title}</span>
+                            <span class="song-artist">${song.artist}</span>
+                        </li>
+                    `;
+                });
+                
+                html += '</ul></div></div>';
+            });
+            
+            html += '</div>';
+            content.innerHTML = html;
+        }
+
+        // 切换歌单显示/隐藏 - 新增函数
+        function togglePlaylist(element) {
+            const content = element.nextElementSibling;
+            const isOpen = content.classList.contains('open');
+            
+            // 关闭所有其他歌单
+            document.querySelectorAll('.playlist-content').forEach(el => {
+                el.classList.remove('open');
+            });
+            
+            // 切换当前歌单
+            if (!isOpen) {
+                content.classList.add('open');
+            }
         }
         
         // 实际部署时使用的fetch函数
@@ -603,12 +648,31 @@
                 .then(data => {
                     setTimeout(() => {
                         if (pageName === 'kazhi') {
-                            // 对于kazhi页面，需要更新全局weiboData
-                            if (data.weibo) {
-                                // 替换全局微博数据
-                                weiboData.weibo = data.weibo;
-                            }
-                            renderKazhi(data);
+                            Promise.all([
+                                fetch('data/weibo.json').then(response => response.json()),
+                                fetch('data/weibo2.json').then(response => response.json())
+                            ])
+                            .then(([data1, data2]) => {
+                                // 合并两个文件的weibo数据
+                                const mergedData = {
+                                    weibo: [...(data1.weibo || []), ...(data2.weibo || [])]
+                                };
+                                
+                                setTimeout(() => {
+                                    // 更新全局weiboData
+                                    weiboData.weibo = mergedData.weibo;
+                                    renderKazhi(mergedData);
+                                    
+                                    setTimeout(() => {
+                                        content.style.opacity = '1';
+                                    }, 50);
+                                }, 300);
+                            })
+                            .catch(error => {
+                                console.error('Error loading weibo data:', error);
+                                content.innerHTML = '<p class="error">页面加载失败</p>';
+                                content.style.opacity = '1';
+                            });
                         } else if (pageName === 'say') {
                             renderSay(data);
                         } else if (pageName === 'cooking') {
