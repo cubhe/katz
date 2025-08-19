@@ -48,33 +48,43 @@ body {
     margin: 0 auto;
 }
 
-/* 新增：纸片卡片样式 */
+/* 卡片翻转效果修复 - 文字不翻转，悬停显示背面 */
+
 .card {
     position: relative;
     width: 100%;
     height: 280px;
     transform-style: preserve-3d;
+    -webkit-transform-style: preserve-3d;
     transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
     cursor: pointer;
-    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.05));
+    /* 移除阴影 */
 }
 
+/* 悬停时整个卡片翻转 */
 .card:hover {
     transform: rotateY(180deg);
-    filter: drop-shadow(0 8px 25px rgba(0, 0, 0, 0.12));
+    -webkit-transform: rotateY(180deg);
+    /* 移除阴影变化 */
 }
 
+/* 点击时的放大效果 */
 .card.clicked {
     transform: scale(1.1) rotateY(180deg);
+    -webkit-transform: scale(1.1) rotateY(180deg);
     z-index: 5;
     transition: transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
 }
 
 .card-face {
     position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
     backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    /* 移除 translateZ */
     border-radius: 12px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
     padding: 30px;
@@ -87,19 +97,57 @@ body {
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    /* 移除 translateZ */
+    transform: rotateY(0deg);
+    -webkit-transform: rotateY(0deg);
 }
 
 .card-back {
     background: linear-gradient(135deg, #f8f8f8 0%, #eeeeee 100%);
     border: 1px solid rgba(200, 200, 200, 0.3);
-    transform: rotateY(180deg);
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     text-align: center;
+    /* 移除 translateZ，背面整体淡入 */
+    transform: rotateY(180deg);
+    -webkit-transform: rotateY(180deg);
+    opacity: 0;
+    transition: opacity 0.3s ease 0.2s;
 }
 
+/* 背面文字保持正常显示，不需要单独的透明度控制 */
+.card-back .card-title,
+.card-back .card-description {
+    /* 文字保持正常方向，不翻转 */
+    transform: none;
+    -webkit-transform: none;
+    /* 确保文字在正确的层级 */
+    position: relative;
+    z-index: 1;
+    /* 重要：文字不使用 backface-visibility，确保可见 */
+    backface-visibility: visible;
+    -webkit-backface-visibility: visible;
+}
+
+/* 正面内容在悬停时隐藏（透明度渐变） */
+.card-front .card-title,
+.card-front .card-description {
+    transition: opacity 0.3s ease;
+}
+
+.card:hover .card-front .card-title,
+.card:hover .card-front .card-description {
+    opacity: 0;
+}
+
+/* 悬停时背面整体淡入 */
+.card:hover .card-back {
+    opacity: 1;
+}
+
+/* 确保文字样式保持不变 */
 .card-title {
     font-family: 'Cormorant Garamond', serif;
     font-size: 28px;
@@ -108,6 +156,9 @@ body {
     letter-spacing: 2px;
     text-align: center;
     margin-bottom: 20px;
+    overflow: visible;
+    text-overflow: unset;
+    white-space: normal;
 }
 
 .card-description {
@@ -117,21 +168,26 @@ body {
     line-height: 1.8;
     letter-spacing: 0.8px;
     max-width: 200px;
+    overflow: visible;
+    text-overflow: unset;
+    white-space: normal;
 }
 
-/* 新增：详情弹窗样式 */
+/* 详情弹窗样式 - 这是缺失的重要部分 */
 .detail-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(245, 245, 245, 0.95);
-    backdrop-filter: blur(10px);
-    z-index: 1000;
+    background: rgba(0, 0, 0, 0.7);
     opacity: 0;
     visibility: hidden;
-    transition: all 0.5s ease;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .detail-overlay.active {
@@ -205,6 +261,80 @@ body {
     padding-left: 20px;
     border-left: 2px solid #e8e8e8;
     letter-spacing: 0.5px;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+    .card {
+        height: 200px;
+        transform-style: preserve-3d;
+        -webkit-transform-style: preserve-3d;
+    }
+    
+    .card-face {
+        /* 移动端也移除 translateZ */
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+    }
+
+    .card-front {
+        transform: rotateY(0deg);
+        -webkit-transform: rotateY(0deg);
+    }
+    
+    .card-back {
+        transform: rotateY(180deg);
+        -webkit-transform: rotateY(180deg);
+        opacity: 0;
+        transition: opacity 0.3s ease 0.2s;
+    }
+    
+    .card:hover .card-back {
+        opacity: 1;
+    }
+
+    /* 移动端背面文字也保持正常方向和可见性 */
+    .card-back .card-title,
+    .card-back .card-description {
+        transform: none;
+        -webkit-transform: none;
+        backface-visibility: visible;
+        -webkit-backface-visibility: visible;
+    }
+
+    .card-title {
+        font-size: 22px;
+        margin-bottom: 15px;
+    }
+    
+    .card-description {
+        font-size: 13px;
+    }
+}
+
+/* 点击状态下背面保持淡入效果 */
+.card.clicked .card-back {
+    opacity: 1;
+}
+
+/* 额外的浏览器兼容性修复 */
+.card-back {
+    /* 强制GPU加速，修复文字渲染问题 */
+    will-change: transform;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* 确保Safari和其他Webkit浏览器的兼容性 */
+@supports (-webkit-appearance: none) {
+    .card-back .card-title,
+    .card-back .card-description {
+        /* WebKit特定的修复 - 文字不翻转且可见 */
+        -webkit-transform: none;
+        transform: none;
+        -webkit-backface-visibility: visible;
+        backface-visibility: visible;
+    }
 }
 
 /* 特殊卡片样式 - 灰白色调变化 */
@@ -500,7 +630,7 @@ body {
     font-style: italic;
 }
 
-/* 响应式设计 */
+/* 响应式设计修改 - 保持现有样式并添加兼容性修复 */
 @media (max-width: 768px) {
     .grid-container {
         grid-template-columns: repeat(2, 1fr);
@@ -508,23 +638,7 @@ body {
         padding: 0 10px;
     }
     
-    .card {
-        height: 200px;
-    }
-    
-    .card-face {
-        padding: 20px;
-    }
-    
-    .card-title {
-        font-size: 22px;
-        margin-bottom: 15px;
-    }
-    
-    .card-description {
-        font-size: 13px;
-    }
-    
+    /* 详情弹窗 */
     .detail-content {
         padding: 30px;
         margin: 20px;

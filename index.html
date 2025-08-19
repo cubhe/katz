@@ -344,7 +344,7 @@
             return result;
         }
 
-        // 新增：渲染咔言咔语页面为9宫格
+        // // 修改后的渲染咔言咔语页面为9宫格
         function renderSayGrid(jsonData) {
             const content = document.getElementById('content');
             
@@ -389,7 +389,7 @@
                         <div class="card-face card-front"></div>
                         <div class="card-face card-back">
                             <h3 class="card-title">食物</h3>
-                            <p class="card-description">火候是一个连续变量，调料是离散选择</p>
+                            <p class="card-description">每一次下厨都是对味觉记忆的重构</p>
                         </div>
                     </div>
 
@@ -397,7 +397,7 @@
                         <div class="card-face card-front"></div>
                         <div class="card-face card-back">
                             <h3 class="card-title">自然</h3>
-                            <p class="card-description">树的分形结构是自然界最优雅的算法</p>
+                            <p class="card-description">森林教会我什么是真正的网络结构</p>
                         </div>
                     </div>
 
@@ -427,8 +427,22 @@
                 </div>
             `;
 
-            // 为卡片添加点击事件
+            // 【新增】生成模板后，从数据中填充每张卡片的背面内容
             setTimeout(() => {
+                Object.keys(sayContentData).forEach(key => {
+                    const data = sayContentData[key];
+                    const card = document.querySelector(`.card[data-content="${key}"]`);
+                    if (!card || !data) return;
+
+                    const titleEl = card.querySelector('.card-back .card-title');
+                    const descEl = card.querySelector('.card-back .card-description');
+
+                    if (titleEl) titleEl.textContent = data.title; // 如：哲思/行走/日常...
+                    // 使用 description 或第一条 items 作为卡片背面描述
+                    if (descEl) descEl.textContent = data.description || (data.items && data.items[0]) || '';
+                });
+
+                // 为卡片添加点击事件
                 document.querySelectorAll('.card:not(.empty-card)').forEach(card => {
                     card.addEventListener('click', function() {
                         this.classList.add('clicked');
@@ -436,7 +450,7 @@
                             const contentType = this.getAttribute('data-content');
                             showDetail(contentType);
                             this.classList.remove('clicked');
-                        }, 200);
+                        }, 800); // 延长到800ms，让用户能看清背面内容
                     });
                 });
             }, 100);
