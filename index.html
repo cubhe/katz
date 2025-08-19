@@ -201,6 +201,57 @@
             return data.weibo[randomIndex];
         }
 
+        function getDailyRandomIndices(totalCount, dailyCount = 200) {
+            const today = new Date();
+            const dateStr = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
+            
+            // 使用日期作为种子生成伪随机数
+            function seededRandom(seed) {
+                const x = Math.sin(seed) * 10000;
+                return x - Math.floor(x);
+            }
+            
+            // 将日期字符串转换为数字种子
+            let seed = 0;
+            for (let i = 0; i < dateStr.length; i++) {
+                seed = ((seed << 5) - seed) + dateStr.charCodeAt(i);
+                seed = seed & seed; // 转换为32位整数
+            }
+            
+            // 生成今日的随机索引数组
+            const indices = [];
+            const actualCount = Math.min(dailyCount, totalCount); // 确保不超过总数
+            
+            // 生成不重复的随机索引
+            const usedIndices = new Set();
+            let currentSeed = seed;
+            
+            while (indices.length < actualCount) {
+                currentSeed = ((currentSeed * 9301 + 49297) % 233280);
+                const randomIndex = Math.floor(seededRandom(currentSeed) * totalCount);
+                
+                if (!usedIndices.has(randomIndex)) {
+                    usedIndices.add(randomIndex);
+                    indices.push(randomIndex);
+                }
+            }
+            
+            return indices;
+        }
+
+        // 修改后的获取随机微博函数
+        function getRandomWeiboFromDaily(data) {
+            const dailyIndices = getDailyRandomIndices(data.weibo.length, 100);
+            
+            // 从当前会话的访问次数中选择索引
+            const visitCount = parseInt(sessionStorage.getItem('visitCount') || '1');
+            const indexPosition = (visitCount - 1) % dailyIndices.length;
+            const selectedIndex = dailyIndices[indexPosition];
+            
+            return data.weibo[selectedIndex];
+        }
+
+
         // 解析日期字符串
         function parseWeiboDate(dateStr) {
             return new Date(dateStr);
@@ -249,7 +300,7 @@
                 selectedWeibo = getLastYearTodayWeibo(data);
                 isLastYearToday = true;
             } else {
-                selectedWeibo = getRandomWeibo(data);
+                selectedWeibo = getRandomWeiboFromDaily(data);
             }
             
             const weiboText = formatWeiboText(selectedWeibo.text);
