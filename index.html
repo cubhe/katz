@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>咔滋的森林</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=Noto+Serif+SC:wght@200;300;400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav id="navbar">
+        <span data-page="kazhi">咔滋</span>
+        <span data-page="say">咔言咔语</span>
+        <span data-page="cooking">Deep Cooking</span>
+        <span data-page="listening">Deep Listening</span>
+    </nav>
+    
+    <div id="content"></div>
+
+    <!-- 详细内容弹窗 - 仅用于咔言咔语页面 -->
+    <div class="detail-overlay" id="detailOverlay">
+        <div class="detail-content">
+            <button class="close-btn" onclick="closeDetail()">&times;</button>
+            <h2 class="detail-title" id="detailTitle"></h2>
+            <div id="detailBody"></div>
+        </div>
+    </div>
+    
+    <script>
+        // 模拟数据 - 实际部署时应从服务器加载
+        const mockData = {
+            kazhi: [
+                { "image": "https://images.unsplash.com/photo-1504548840739-580b10ae7715?w=800&q=80", "text": "做事要像蘑菇一样悄悄生长，然后惊艳所有人" },
+                { "image": "https://images.unsplash.com/photo-1528518290605-1fcc8dcca204?w=800&q=80", "text": "既然是森林，就不必害怕孤独" },
+                { "image": "https://images.unsplash.com/photo-1536431311719-398b6704d4cc?w=800&q=80", "text": "每个蘑菇都有自己的节奏" },
+                { "image": "https://images.unsplash.com/photo-1499343256340-863c15e16b48?w=800&q=80", "text": "在暗处积蓄力量，是为了更好的绽放" },
+                { "image": "https://images.unsplash.com/photo-1604251177154-ad0e56c7e822?w=800&q=80", "text": "生活就像采蘑菇，惊喜总在不经意间" }
+            ],
+            say: {
+                "Philosophy": [
+                    "感情像神经网络，训练过拟合就难以泛化",
+                    "所有方向都是一场增益控制",
+                    "人生是一个非凸优化问题，有很多局部最优解",
+                    "思考的熵越大，创造力越强"
+                ],
+                "Travel": [
+                    "在旧金山烈日下喝冰美式是人类学意义的一种幸福",
+                    "京都的寺庙教会我：沉默也是一种语言",
+                    "在冰岛看极光时，我理解了概率的美"
+                ],
+                "Life": [
+                    "做饭是我与混沌系统对话的方式",
+                    "养猫让我理解了什么是无条件的马尔可夫过程",
+                    "早起跑步是对抗熵增的日常仪式"
+                ],
+                "Tech": [
+                    "Debug 就像考古，每个 bug 都有它的历史",
+                    "好的架构像诗歌，简洁而富有表达力",
+                    "重构代码就像整理房间，让未来的自己感谢现在"
+                ],
+                "Food": [
+                    "每一次下厨都是对味觉记忆的重构",
+                    "调料的比例就像代码的逻辑，需要精确和直觉并存",
+                    "厨房是最朴素的实验室"
+                ],
+                "Nature": [
+                    "森林教会我什么是真正的网络结构",
+                    "每一片落叶都在讲述时间的故事",
+                    "风是树之间最温柔的对话"
+                ],
+                "Reading": [
+                    "好书如林中小径，总能引向意想不到的风景",
+                    "文字是思想最精确的容器",
+                    "阅读是与古今智者的深度对话"
+                ],
+                "Music": [
+                    "音符是时间的DNA",
+                    "每首歌都承载着一个完整的情感宇宙",
+                    "静默也是音乐的一部分"
+                ],
+                "Code": [
+                    "优雅的代码如同诗歌，简洁而富有表达力",
+                    "每个函数都应该有单一而明确的使命",
+                    "重构是对过去自己最好的致敬"
+                ]
+            },
+            cooking: {
+                "philosophy": "做菜不是归纳法，是生成模型的采样过程。每道菜都是在 flavor space 里的一次随机游走。",
+                "recipes": {
+                    "猪": [
+                        { "title": "香菇炸酱臊子", "image": "https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?w=400&q=80" },
+                        { "title": "红烧肉的量子态", "image": "https://images.unsplash.com/photo-1526318896980-cf78c088618c?w=400&q=80" }
+                    ],
+                    "牛": [
+                        { "title": "黑椒牛肉的熵增", "image": "https://images.unsplash.com/photo-1504973960431-1c467e159aa4?w=400&q=80" }
+                    ],
+                    "鸡": [
+                        { "title": "宫保鸡丁的离散数学", "image": "https://images.unsplash.com/photo-1569058242253-92a9c755a0ec?w=400&q=80" }
+                    ],
+                    "蔬菜": [
+                        { "title": "麻婆豆腐的相变", "image": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80" },
+                        { "title": "清炒时蔬的极简主义", "image": "https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=400&q=80" }
+                    ],
+                    "羊": []
+                }
+            },
+            listening: [
+                { "title": "可能是夜晚", "artist": "陈粒" },
+                { "title": "Reflections", "artist": "Nils Frahm" },
+                { "title": "Arrival of the Birds", "artist": "The Cinematic Orchestra" },
+                { "title": "春风十里", "artist": "鹿先森乐队" },
+                { "title": "Mad World", "artist": "Gary Jules" },
+                { "title": "River Flows in You", "artist": "Yiruma" },
+                { "title": "大风吹", "artist": "草东没有派对" },
+                { "title": "Comptine d'un autre été", "artist": "Yann Tiersen" },
+                { "title": "理想三旬", "artist": "陈鸿宇" },
+                { "title": "Nuvole Bianche", "artist": "Ludovico Einaudi" }
+            ]
+        };
+
+        // 咔言咔语页面的9宫格内容数据 - 从JSON文件读取后转换
+        let sayContentData = {};
+
+        let weiboData = { weibo: [] };
+
+        // 缓存：详情弹窗按 id 查找内容
+        let quartersData = { quarters: [] };
+        let cookingData = { essays: [], recipes: {}, philosophy: '' };
+        let columnsData = { columns: [] };
+        // 当前打开的专栏 id（在 column 视图时不为空）
+        let currentColumnId = null;
+
+        // 加载页面函数
+        function loadPage(pageName) {
+            const content = document.getElementById('content');
+            
+            // 更新导航激活状态
+            document.querySelectorAll('#navbar span').forEach(span => {
+                span.classList.remove('active');
+                if (span.getAttribute('data-page') === pageName) {
+                    span.classList.add('active');
+                }
+            });
+            
+            // 淡出效果
+            content.style.opacity = '0';
+            
+            setTimeout(() => {
+                // 模拟异步加载
+                const data = mockData[pageName];
+                
+                if (pageName === 'kazhi') {
+                    renderKazhi(data);
+                } else if (pageName === 'say') {
+                    renderSayGrid(data); // 使用9宫格版本
+                } else if (pageName === 'cooking') {
+                    renderCooking(data);
+                } else if (pageName === 'listening') {
+                    renderListening(data);
+                } else if (pageName === 'quarters') {
+                    renderQuarters(data);
+                }
+                
+                // 淡入效果
+                setTimeout(() => {
+                    content.style.opacity = '1';
+                }, 50);
+            }, 300);
+        }
+
+        // 修改这两个函数，直接使用传入的data
+        function getLastYearTodayWeibo(data) {
+            const today = new Date();
+            const lastYear = today.getFullYear() - 1;
+            const targetMonth = today.getMonth() + 1;
+            const targetDay = today.getDate();
+
+            const matchingWeibos = data.weibo.filter(weibo => {
+                const weiboDate = parseWeiboDate(weibo.createdAt);
+                return weiboDate.getFullYear() === lastYear &&
+                    weiboDate.getMonth() + 1 === targetMonth &&
+                    weiboDate.getDate() === targetDay;
+            });
+
+            if (matchingWeibos.length > 0) {
+                return matchingWeibos[Math.floor(Math.random() * matchingWeibos.length)];
+            }
+
+            // 如果没有找到，返回最接近的
+            const sortedWeibos = data.weibo
+                .map(weibo => ({
+                    ...weibo,
+                    date: parseWeiboDate(weibo.createdAt)
+                }))
+                .sort((a, b) => {
+                    const aDiff = Math.abs(a.date.getMonth() - today.getMonth()) + 
+                                Math.abs(a.date.getDate() - today.getDate());
+                    const bDiff = Math.abs(b.date.getMonth() - today.getMonth()) + 
+                                Math.abs(b.date.getDate() - today.getDate());
+                    return aDiff - bDiff;
+                });
+
+            return sortedWeibos[0];
+        }
+
+        function getRandomWeibo(data) {
+            const randomIndex = Math.floor(Math.random() * data.weibo.length);
+            return data.weibo[randomIndex];
+        }
+
+        function getDailyRandomIndices(totalCount, dailyCount = 200) {
+            const today = new Date();
+            const dateStr = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
+            
+            // 使用日期作为种子生成伪随机数
+            function seededRandom(seed) {
+                const x = Math.sin(seed) * 10000;
+                return x - Math.floor(x);
+            }
+            
+            // 将日期字符串转换为数字种子
+            let seed = 0;
+            for (let i = 0; i < dateStr.length; i++) {
+                seed = ((seed << 5) - seed) + dateStr.charCodeAt(i);
+                seed = seed & seed; // 转换为32位整数
+            }
+            
+            // 生成今日的随机索引数组
+            const indices = [];
+            const actualCount = Math.min(dailyCount, totalCount); // 确保不超过总数
+            
+            // 生成不重复的随机索引
+            const usedIndices = new Set();
+            let currentSeed = seed;
+            
+            while (indices.length < actualCount) {
+                currentSeed = ((currentSeed * 9301 + 49297) % 233280);
+                const randomIndex = Math.floor(seededRandom(currentSeed) * totalCount);
+                
+                if (!usedIndices.has(randomIndex)) {
+                    usedIndices.add(randomIndex);
+                    indices.push(randomIndex);
+                }
+            }
+            
+            return indices;
+        }
+
+        // 修改后的获取随机微博函数
+        function getRandomWeiboFromDaily(data) {
+            const dailyIndices = getDailyRandomIndices(data.weibo.length, 100);
+            
+            // 从当前会话的访问次数中选择索引
+            const visitCount = parseInt(sessionStorage.getItem('visitCount') || '1');
+            const indexPosition = (visitCount - 1) % dailyIndices.length;
+            const selectedIndex = dailyIndices[indexPosition];
+            
+            return data.weibo[selectedIndex];
+        }
+
+
+        // 解析日期字符串
+        function parseWeiboDate(dateStr) {
+            return new Date(dateStr);
+        }
+
+        // 格式化微博文本，去掉多余的符号和换行
+        function formatWeiboText(text) {
+            return text
+                .replace(/\n/g, ' ')
+                .replace(/[​\u200B-\u200D\uFEFF]/g, '') // 移除零宽字符
+                .replace(/\s+/g, ' ') // 合并多个空格
+                .trim()
+                .substring(0, 520) + (text.length > 520 ? '...' : ''); // 限制长度
+        }
+
+        // 格式化日期显示
+        function formatDate(dateStr) {
+            const date = parseWeiboDate(dateStr);
+            return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+        }
+
+        // 渲染咔滋页面 - 纯文字版本，不使用图片
+        function renderKazhi(data) {
+            const content = document.getElementById('content');
+            
+            // 检查是否是今天第一次访问
+            const today = new Date().toDateString();
+            const lastVisit = sessionStorage.getItem('lastVisitDate');
+            const visitCount = parseInt(sessionStorage.getItem('visitCount') || '0');
+            const isFirstVisitToday = lastVisit !== today;
+            
+            // 更新访问记录
+            if (isFirstVisitToday) {
+                sessionStorage.setItem('lastVisitDate', today);
+                sessionStorage.setItem('visitCount', '1');
+            } else {
+                sessionStorage.setItem('visitCount', (visitCount + 1).toString());
+            }
+            
+            // 根据访问次数选择微博
+            let selectedWeibo;
+            let isLastYearToday = false;
+            const currentVisitCount = parseInt(sessionStorage.getItem('visitCount'));
+            
+            if (currentVisitCount === 1) {
+                selectedWeibo = getLastYearTodayWeibo(data);
+                isLastYearToday = true;
+            } else {
+                selectedWeibo = getRandomWeiboFromDaily(data);
+            }
+            
+            const weiboText = formatWeiboText(selectedWeibo.text);
+            const weiboDate = formatDate(selectedWeibo.createdAt);
+            
+            // 创建容器 - 纯文字版本
+            content.innerHTML = `
+                <div class="kazhi-container text-only">
+                    <div class="weibo-date">
+                        ${isLastYearToday ? '去年今日' : '随机回忆'} · ${weiboDate}
+                    </div>
+                    <p class="kazhi-text">${weiboText}</p>
+                </div>
+            `;
+        }
+
+        // 渲染咔言咔语 = 专栏 hub（9 宫格）
+        function renderSayGrid(jsonData) {
+            const content = document.getElementById('content');
+            columnsData = jsonData;
+            currentColumnId = null;
+
+            const cols = jsonData.columns || [];
+            // 补齐到 9 格（不够就补 blank）
+            while (cols.length < 9) {
+                cols.push({ id: 'blank-' + cols.length, title: '·', subtitle: '留白也是一种表达', blank: true });
+            }
+
+            let html = '<div class="grid-container">';
+            cols.slice(0, 9).forEach(col => {
+                const isBlank = !!col.blank;
+                const cardClass = isBlank ? 'card empty-card' : 'card';
+                html += `
+                    <div class="${cardClass}" data-column="${col.id}">
+                        <div class="card-face card-front"></div>
+                        <div class="card-face card-back">
+                            <h3 class="card-title">${col.title || ''}</h3>
+                            <p class="card-description">${col.subtitle || ''}</p>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            content.innerHTML = html;
+
+            // 卡片点击：进入对应专栏页
+            setTimeout(() => {
+                document.querySelectorAll('.card:not(.empty-card)').forEach(card => {
+                    card.addEventListener('click', function () {
+                        this.classList.add('clicked');
+                        const colId = this.getAttribute('data-column');
+                        setTimeout(() => {
+                            this.classList.remove('clicked');
+                            loadColumn(colId);
+                        }, 580);
+                    });
+                });
+            }, 100);
+        }
+
+        // 进入某个专栏页（第二层：标题列表）
+        function loadColumn(columnId) {
+            const col = (columnsData.columns || []).find(c => c.id === columnId);
+            if (!col || col.blank) return;
+
+            const content = document.getElementById('content');
+            content.style.opacity = '0';
+
+            // 准备 items：要么 inline，要么从外部 JSON 拉
+            const finish = (items) => {
+                renderColumnView(col, items);
+                setTimeout(() => { content.style.opacity = '1'; }, 50);
+            };
+
+            if (col.ref === 'quarters') {
+                ensureQuartersLoaded().then(() => {
+                    const items = (quartersData.quarters || []).map(q => ({
+                        id: q.id,
+                        title: q.label,
+                        tag: (q.keywords || []).join(' · '),
+                        summary: q.summary,
+                        content: q.content
+                    }));
+                    finish(items);
+                });
+            } else if (col.ref === 'cooking') {
+                ensureCookingLoaded().then(() => {
+                    finish(cookingData.essays || []);
+                });
+            } else {
+                setTimeout(() => finish(col.items || []), 300);
+            }
+        }
+
+        // 渲染专栏视图（第二层）：面包屑 + 手风琴列表
+        function renderColumnView(col, items) {
+            currentColumnId = col.id;
+            const content = document.getElementById('content');
+
+            let html = '<div class="column-view">';
+            html += `<button class="breadcrumb" type="button" onclick="backToHub()">← 咔言咔语</button>`;
+            html += `<header class="column-header">`;
+            html += `<h2 class="column-title">${col.title}</h2>`;
+            if (col.subtitle) html += `<div class="column-subtitle">${col.subtitle}</div>`;
+            html += `</header>`;
+
+            if (!items || items.length === 0) {
+                html += `<div class="column-empty">敬请期待 / coming soon</div>`;
+            } else {
+                html += '<div class="essay-list column-list">';
+                items.forEach(item => {
+                    // 把 col.id 编码到 source 上，方便详情弹窗回查
+                    html += renderEssayEntryInline(item, 'column:' + col.id);
+                });
+                html += '</div>';
+            }
+            html += '</div>';
+            content.innerHTML = html;
+
+            // 缓存当前 column 的 items 以便详情弹窗可以查找
+            columnItemsCache[col.id] = items;
+
+            attachEssayHandlers(content);
+        }
+
+        // 返回 hub
+        function backToHub() {
+            const content = document.getElementById('content');
+            content.style.opacity = '0';
+            setTimeout(() => {
+                renderSayGrid(columnsData);
+                content.style.opacity = '1';
+            }, 250);
+        }
+
+        // 给 column 视图用的 entry 渲染（与 cooking/quarters 共用 markup，source 字段不同）
+        function renderEssayEntryInline(item, source) {
+            const buttonLabel = source === 'recipe' ? '查看做法 →' : '阅读全文 →';
+            return `
+                <article class="essay-entry" data-source="${source}" data-id="${item.id}">
+                    <header class="essay-header">
+                        <span class="essay-title">${item.title}</span>
+                        ${item.tag ? `<span class="essay-tag">${item.tag}</span>` : ''}
+                        <span class="essay-toggle">+</span>
+                    </header>
+                    <div class="essay-body">
+                        <p class="essay-summary">${item.summary || ''}</p>
+                        <button class="read-full" type="button">${buttonLabel}</button>
+                    </div>
+                </article>
+            `;
+        }
+
+        // 缓存：column id → items
+        let columnItemsCache = {};
+
+        // 懒加载 quarters/cooking JSON（如果还没加载过）
+        function ensureQuartersLoaded() {
+            if ((quartersData.quarters || []).length > 0) return Promise.resolve();
+            return fetch('data/quarters.json').then(r => r.json()).then(d => { quartersData = d; });
+        }
+        function ensureCookingLoaded() {
+            if ((cookingData.essays || []).length > 0) return Promise.resolve();
+            return fetch('data/cooking.json').then(r => r.json()).then(d => { cookingData = d; });
+        }
+
+        // 关闭详情弹窗
+        function closeDetail() {
+            const overlay = document.getElementById('detailOverlay');
+            overlay.classList.remove('active');
+            
+            // 恢复背景滚动
+            document.body.style.overflow = '';
+        }
+
+        // 渲染Deep Cooking页面 - 包含 philosophy + essays（迷思） + recipes
+        function renderCooking(data) {
+            const content = document.getElementById('content');
+            cookingData = data; // 缓存用于详情弹窗
+
+            let html = '<div class="cooking-container">';
+
+            html += `<p class="philosophy">${data.philosophy}</p>`;
+
+            // 迷思 / Essays 区块（默认折叠）
+            if (Array.isArray(data.essays) && data.essays.length > 0) {
+                html += '<section class="essays-section collapsible-section">';
+                html += '<h3 class="section-heading toggle-section" onclick="toggleSection(this)">迷思<span class="toggle-icon">+</span></h3>';
+                html += '<div class="section-body"><div class="essay-list">';
+                data.essays.forEach(essay => {
+                    html += renderEssayEntry(essay, 'cooking');
+                });
+                html += '</div></div></section>';
+            }
+
+            // Recipes 区块（默认折叠）
+            if (data.recipes) {
+                html += '<section class="recipes-section collapsible-section">';
+                html += '<h3 class="section-heading toggle-section" onclick="toggleSection(this)">菜谱<span class="toggle-icon">+</span></h3>';
+                html += '<div class="section-body">';
+                Object.keys(data.recipes).forEach(category => {
+                    const items = data.recipes[category] || [];
+                    if (items.length === 0) return;
+                    html += `<div class="recipe-category">`;
+                    html += `<h4 class="recipe-category-title">${category}</h4>`;
+                    html += `<div class="essay-list recipe-list-v2">`;
+                    items.forEach(r => {
+                        html += renderEssayEntryInline({
+                            id: r.id,
+                            title: r.title,
+                            tag: r.tag || '',
+                            summary: r.summary || '',
+                            content: r.content || ''
+                        }, 'recipe');
+                    });
+                    html += `</div></div>`;
+                });
+                html += '</div></section>';
+            }
+
+            // Wishlist 待做菜谱
+            if (Array.isArray(data.wishlist) && data.wishlist.length > 0) {
+                html += '<section class="wishlist-section">';
+                html += '<h3 class="section-heading">待做 / Wishlist</h3>';
+                html += '<ul class="wishlist">';
+                data.wishlist.forEach(name => {
+                    html += `<li>${name}</li>`;
+                });
+                html += '</ul></section>';
+            }
+
+            html += '</div>';
+            content.innerHTML = html;
+
+            attachEssayHandlers(content);
+        }
+
+        // 渲染 PhD Quarters 页面
+        function renderQuarters(data) {
+            const content = document.getElementById('content');
+            quartersData = data; // 缓存
+
+            let html = '<div class="quarters-container">';
+            if (data.intro) {
+                html += `<p class="philosophy">${data.intro}</p>`;
+            }
+            html += '<div class="essay-list quarter-list">';
+            (data.quarters || []).forEach(q => {
+                html += renderEssayEntry({
+                    id: q.id,
+                    title: q.label,
+                    tag: (q.keywords || []).join(' · '),
+                    summary: q.summary,
+                    content: q.content
+                }, 'quarters');
+            });
+            html += '</div></div>';
+
+            content.innerHTML = html;
+            attachEssayHandlers(content);
+        }
+
+        // 共享：渲染一个可展开的条目（标题 → 摘要 + 阅读全文）
+        function renderEssayEntry(item, source) {
+            return `
+                <article class="essay-entry" data-source="${source}" data-id="${item.id}">
+                    <header class="essay-header">
+                        <span class="essay-title">${item.title}</span>
+                        ${item.tag ? `<span class="essay-tag">${item.tag}</span>` : ''}
+                        <span class="essay-toggle">+</span>
+                    </header>
+                    <div class="essay-body">
+                        <p class="essay-summary">${item.summary || ''}</p>
+                        <button class="read-full" type="button">阅读全文 →</button>
+                    </div>
+                </article>
+            `;
+        }
+
+        // 给所有 essay-entry 绑定点击事件
+        function attachEssayHandlers(scope) {
+            scope.querySelectorAll('.essay-entry').forEach(entry => {
+                const header = entry.querySelector('.essay-header');
+                const readBtn = entry.querySelector('.read-full');
+                if (header) {
+                    header.addEventListener('click', () => {
+                        entry.classList.toggle('open');
+                    });
+                }
+                if (readBtn) {
+                    readBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const source = entry.getAttribute('data-source');
+                        const id = entry.getAttribute('data-id');
+                        showEssayDetail(source, id);
+                    });
+                }
+            });
+        }
+
+        // 打开详情弹窗（复用 #detailOverlay）
+        function showEssayDetail(source, id) {
+            let item = null;
+            if (source === 'quarters') {
+                const q = (quartersData.quarters || []).find(x => x.id === id);
+                if (q) {
+                    item = {
+                        title: q.label,
+                        subtitle: (q.keywords || []).join(' · '),
+                        content: q.content
+                    };
+                }
+            } else if (source === 'cooking') {
+                const e = (cookingData.essays || []).find(x => x.id === id);
+                if (e) {
+                    item = {
+                        title: e.title,
+                        subtitle: e.tag || '',
+                        content: e.content
+                    };
+                }
+            } else if (source && source.startsWith('column:')) {
+                const colId = source.slice('column:'.length);
+                const items = columnItemsCache[colId] || [];
+                const it = items.find(x => x.id === id);
+                if (it) {
+                    item = {
+                        title: it.title,
+                        subtitle: it.tag || '',
+                        content: it.content
+                    };
+                }
+            } else if (source === 'recipe') {
+                const cats = (cookingData.recipes || {});
+                for (const cat of Object.keys(cats)) {
+                    const r = (cats[cat] || []).find(x => x.id === id);
+                    if (r) {
+                        item = {
+                            title: r.title,
+                            subtitle: cat + (r.tag ? ' · ' + r.tag : ''),
+                            content: r.content
+                        };
+                        break;
+                    }
+                }
+            }
+            if (!item) return;
+
+            const overlay = document.getElementById('detailOverlay');
+            const title = document.getElementById('detailTitle');
+            const body = document.getElementById('detailBody');
+
+            title.textContent = item.title;
+            let bodyHTML = '';
+            if (item.subtitle) {
+                bodyHTML += `<div class="detail-subtitle">${item.subtitle}</div>`;
+            }
+            bodyHTML += `<div class="detail-article">${renderMarkdown(item.content)}</div>`;
+            body.innerHTML = bodyHTML;
+
+            overlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // 极简 markdown 渲染：## 标题、> 引用、**加粗**、段落
+        function renderMarkdown(text) {
+            if (!text) return '';
+            const escape = (s) => s
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+
+            const blocks = text.split(/\n\n+/);
+            const htmlBlocks = blocks.map(raw => {
+                const block = raw.trim();
+                if (!block) return '';
+
+                // 标题 ## / ###
+                if (block.startsWith('### ')) {
+                    return `<h4>${inline(escape(block.slice(4)))}</h4>`;
+                }
+                if (block.startsWith('## ')) {
+                    return `<h3>${inline(escape(block.slice(3)))}</h3>`;
+                }
+                if (block.startsWith('# ')) {
+                    return `<h2>${inline(escape(block.slice(2)))}</h2>`;
+                }
+                // 水平分割线
+                if (/^---+$/.test(block)) {
+                    return '<hr/>';
+                }
+                // 引用块（每行以 > 开头）
+                if (block.split('\n').every(l => l.startsWith('>'))) {
+                    const inner = block
+                        .split('\n')
+                        .map(l => l.replace(/^>\s?/, ''))
+                        .join('<br/>');
+                    return `<blockquote>${inline(escape(inner))}</blockquote>`;
+                }
+                // 有序列表（每行以 N. 开头）
+                const lines = block.split('\n');
+                if (lines.length > 0 && lines.every(l => /^\d+\.\s/.test(l))) {
+                    const items = lines
+                        .map(l => l.replace(/^\d+\.\s/, ''))
+                        .map(t => `<li>${inline(escape(t))}</li>`);
+                    return `<ol>${items.join('')}</ol>`;
+                }
+                // 无序列表（每行以 - 或 * 开头）
+                if (lines.length > 0 && lines.every(l => /^[-*]\s/.test(l))) {
+                    const items = lines
+                        .map(l => l.replace(/^[-*]\s/, ''))
+                        .map(t => `<li>${inline(escape(t))}</li>`);
+                    return `<ul>${items.join('')}</ul>`;
+                }
+                // 表格：第 1 行表头 / 第 2 行分割 / 其余数据
+                if (lines.length >= 3
+                        && lines.every(l => /^\|.*\|$/.test(l.trim()))
+                        && /^\|[\s\-:|]+\|$/.test(lines[1].trim())) {
+                    const splitCells = (l) => {
+                        const inner = l.trim().slice(1, -1);
+                        return inner.split('|').map(c => c.trim());
+                    };
+                    const headers = splitCells(lines[0]);
+                    const rows = lines.slice(2).map(splitCells);
+                    let table = '<table><thead><tr>';
+                    headers.forEach(h => { table += `<th>${inline(escape(h))}</th>`; });
+                    table += '</tr></thead><tbody>';
+                    rows.forEach(row => {
+                        table += '<tr>';
+                        row.forEach(c => { table += `<td>${inline(escape(c))}</td>`; });
+                        table += '</tr>';
+                    });
+                    table += '</tbody></table>';
+                    return table;
+                }
+                // 普通段落（段内单换行 → <br>）
+                const escaped = escape(block).replace(/\n/g, '<br/>');
+                return `<p>${inline(escaped)}</p>`;
+            });
+
+            return htmlBlocks.join('\n');
+
+            function inline(s) {
+                // **bold**
+                return s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+            }
+        }
+        
+        // === Deep Listening：四个 tab ===
+        // playlists (默认) / profile (听歌画像) / by-year / by-artist
+        let listeningPlaylistsCache = null; // 12 个精选
+        let likedStatsCache = null;          // liked-stats.json
+        let likedSongsCache = null;          // liked.json (3667 首)
+
+        function renderListening(data) {
+            // data 是精选 12 个歌单（数组）— 默认 tab 用
+            listeningPlaylistsCache = Array.isArray(data)
+                ? data
+                : Object.keys(data || {}).map(name => ({ name, tracks: data[name] }));
+
+            const content = document.getElementById('content');
+            content.innerHTML = `
+                <div class="listening-container">
+                    <nav class="listening-tabs">
+                        <span class="lt-tab active" data-tab="playlists">歌单</span>
+                        <span class="lt-tab" data-tab="profile">听歌画像</span>
+                        <span class="lt-tab" data-tab="by-year">按年份</span>
+                        <span class="lt-tab" data-tab="by-artist">按艺人</span>
+                    </nav>
+                    <div class="listening-body" id="listeningBody"></div>
+                </div>
+            `;
+
+            // 绑定 tab 切换
+            content.querySelectorAll('.lt-tab').forEach(tab => {
+                tab.addEventListener('click', () => switchListeningTab(tab.getAttribute('data-tab')));
+            });
+
+            // 默认显示精选歌单
+            switchListeningTab('playlists');
+        }
+
+        async function switchListeningTab(tabName) {
+            // 切 active 状态
+            document.querySelectorAll('.lt-tab').forEach(t => {
+                t.classList.toggle('active', t.getAttribute('data-tab') === tabName);
+            });
+            const body = document.getElementById('listeningBody');
+            body.style.opacity = '0';
+
+            try {
+                if (tabName === 'playlists') {
+                    renderListeningPlaylists(body, listeningPlaylistsCache || []);
+                } else if (tabName === 'profile') {
+                    if (!likedStatsCache) {
+                        likedStatsCache = await fetch('data/liked-stats.json').then(r => r.json());
+                    }
+                    renderListeningProfile(body, likedStatsCache);
+                } else if (tabName === 'by-year') {
+                    if (!likedSongsCache) {
+                        body.innerHTML = '<p class="loading">读取 3667 首歌中…</p>';
+                        body.style.opacity = '1';
+                        likedSongsCache = await fetch('data/liked.json').then(r => r.json());
+                        body.style.opacity = '0';
+                    }
+                    renderListeningByYear(body, likedSongsCache);
+                } else if (tabName === 'by-artist') {
+                    if (!likedSongsCache) {
+                        body.innerHTML = '<p class="loading">读取 3667 首歌中…</p>';
+                        body.style.opacity = '1';
+                        likedSongsCache = await fetch('data/liked.json').then(r => r.json());
+                        body.style.opacity = '0';
+                    }
+                    if (!likedStatsCache) {
+                        likedStatsCache = await fetch('data/liked-stats.json').then(r => r.json());
+                    }
+                    renderListeningByArtist(body, likedSongsCache, likedStatsCache);
+                }
+            } catch (e) {
+                body.innerHTML = '<p class="error">加载失败：' + e.message + '</p>';
+            }
+
+            setTimeout(() => { body.style.opacity = '1'; }, 60);
+        }
+
+        // —— Tab 1: 精选歌单 ——
+        function renderListeningPlaylists(body, playlists) {
+            let html = '';
+            playlists.forEach(p => {
+                const tracks = p.tracks || [];
+                // 网易云官方 iframe；data-src 等到 accordion 第一次打开再注入，
+                // 避免 12 个 iframe 同时开 12 路 NetEase 连接
+                const playerHTML = p.id ? `
+                    <div class="playlist-player">
+                        <iframe class="ne-iframe"
+                                frameborder="no" border="0"
+                                marginwidth="0" marginheight="0"
+                                width="100%" height="86"
+                                data-src="//music.163.com/outchain/player?type=0&id=${p.id}&auto=0&height=66"></iframe>
+                        <a class="ne-fallback" href="https://music.163.com/#/playlist?id=${p.id}" target="_blank" rel="noopener">如未加载，到网易云打开 →</a>
+                    </div>
+                ` : '';
+                html += `
+                    <div class="playlist-section">
+                        <h3 class="playlist-title" onclick="togglePlaylist(this)">
+                            ${p.name}
+                            <span class="playlist-count">${tracks.length}</span>
+                        </h3>
+                        <div class="playlist-content">
+                            ${playerHTML}
+                            <ul class="song-list">
+                `;
+                tracks.forEach(song => {
+                    html += `
+                        <li class="song-item">
+                            <span class="song-title">${song.title}</span>
+                            <span class="song-artist">${song.artist}</span>
+                        </li>
+                    `;
+                });
+                html += '</ul></div></div>';
+            });
+            body.innerHTML = html;
+        }
+
+        // —— Tab 2: 听歌画像 ——
+        function renderListeningProfile(body, stats) {
+            const total = stats.total || 0;
+            const hours = stats.totalDurationHours || 0;
+            const avg = stats.avgDurationSec || 0;
+            const topArtists = (stats.topArtists || []).slice(0, 20);
+            const maxArtist = topArtists.length ? topArtists[0].count : 1;
+
+            const yearEntries = Object.entries(stats.byYear || {})
+                .map(([y, c]) => [+y, c])
+                .filter(([y]) => y >= 2008 && y <= 2030)
+                .sort((a, b) => a[0] - b[0]);
+            const maxYear = yearEntries.length ? Math.max(...yearEntries.map(e => e[1])) : 1;
+
+            let html = `
+                <section class="profile-overview">
+                    <div class="profile-stat">
+                        <div class="profile-num">${total.toLocaleString()}</div>
+                        <div class="profile-label">首</div>
+                    </div>
+                    <div class="profile-stat">
+                        <div class="profile-num">${hours}</div>
+                        <div class="profile-label">小时</div>
+                    </div>
+                    <div class="profile-stat">
+                        <div class="profile-num">${(avg / 60).toFixed(1)}</div>
+                        <div class="profile-label">分钟 / 首均</div>
+                    </div>
+                </section>
+
+                <section class="profile-block">
+                    <h3 class="profile-heading">Top 艺人</h3>
+                    <div class="chart-rows">`;
+            topArtists.forEach(a => {
+                const pct = (a.count / maxArtist * 100).toFixed(1);
+                html += `
+                        <div class="chart-row">
+                            <span class="chart-label">${a.name}</span>
+                            <div class="chart-bar-track"><div class="chart-bar-fill" style="width:${pct}%"></div></div>
+                            <span class="chart-value">${a.count}</span>
+                        </div>`;
+            });
+            html += `
+                    </div>
+                </section>
+
+                <section class="profile-block">
+                    <h3 class="profile-heading">按年份分布</h3>
+                    <div class="chart-rows year-rows">`;
+            yearEntries.reverse().forEach(([y, c]) => {
+                const pct = (c / maxYear * 100).toFixed(1);
+                html += `
+                        <div class="chart-row">
+                            <span class="chart-label year-label">${y}</span>
+                            <div class="chart-bar-track"><div class="chart-bar-fill" style="width:${pct}%"></div></div>
+                            <span class="chart-value">${c}</span>
+                        </div>`;
+            });
+            html += `
+                    </div>
+                </section>
+            `;
+            body.innerHTML = html;
+        }
+
+        // —— Tab 3: 按年份 ——
+        function renderListeningByYear(body, songs) {
+            const grouped = {};
+            songs.forEach(s => {
+                const y = s.y || 0;
+                if (!grouped[y]) grouped[y] = [];
+                grouped[y].push(s);
+            });
+            const years = Object.keys(grouped).map(Number)
+                .filter(y => y >= 1900 && y <= 2030)
+                .sort((a, b) => b - a);
+
+            let html = '';
+            years.forEach(y => {
+                const list = grouped[y];
+                html += `
+                    <div class="playlist-section">
+                        <h3 class="playlist-title" onclick="togglePlaylist(this)">
+                            ${y}
+                            <span class="playlist-count">${list.length}</span>
+                        </h3>
+                        <div class="playlist-content">
+                            <ul class="song-list">`;
+                list.forEach(s => {
+                    html += `
+                            <li class="song-item">
+                                <span class="song-title">${s.t}</span>
+                                <span class="song-artist">${s.a}</span>
+                            </li>`;
+                });
+                html += `
+                            </ul>
+                        </div>
+                    </div>`;
+            });
+
+            // 未知年份归到末尾
+            if (grouped[0]) {
+                const list = grouped[0];
+                html += `
+                    <div class="playlist-section">
+                        <h3 class="playlist-title" onclick="togglePlaylist(this)">
+                            未知年份
+                            <span class="playlist-count">${list.length}</span>
+                        </h3>
+                        <div class="playlist-content">
+                            <ul class="song-list">`;
+                list.slice(0, 200).forEach(s => {
+                    html += `
+                            <li class="song-item">
+                                <span class="song-title">${s.t}</span>
+                                <span class="song-artist">${s.a}</span>
+                            </li>`;
+                });
+                if (list.length > 200) {
+                    html += `<li class="song-item more-note">…还有 ${list.length - 200} 首</li>`;
+                }
+                html += `
+                            </ul>
+                        </div>
+                    </div>`;
+            }
+
+            body.innerHTML = html;
+        }
+
+        // —— Tab 4: 按艺人 ——
+        function renderListeningByArtist(body, songs, stats) {
+            // 用 stats.topArtists 决定显示顺序，扩展到前 50
+            const top = (stats.topArtists || []).slice(0, 50);
+            // 给每个艺人匹配歌曲（出现在 artist 字段中即算）
+            const grouped = {};
+            top.forEach(a => { grouped[a.name] = []; });
+            songs.forEach(s => {
+                (s.a || '').split(' / ').forEach(artist => {
+                    if (grouped[artist]) grouped[artist].push(s);
+                });
+            });
+
+            let html = '';
+            top.forEach(({ name, count }) => {
+                const list = grouped[name] || [];
+                html += `
+                    <div class="playlist-section">
+                        <h3 class="playlist-title" onclick="togglePlaylist(this)">
+                            ${name}
+                            <span class="playlist-count">${count}</span>
+                        </h3>
+                        <div class="playlist-content">
+                            <ul class="song-list">`;
+                list.forEach(s => {
+                    html += `
+                            <li class="song-item">
+                                <span class="song-title">${s.t}</span>
+                                <span class="song-artist">${s.a}</span>
+                            </li>`;
+                });
+                html += `
+                            </ul>
+                        </div>
+                    </div>`;
+            });
+            body.innerHTML = html;
+        }
+
+        // 折叠 / 展开整个 section（用于 Deep Cooking 的 迷思 / 菜谱）
+        function toggleSection(headingEl) {
+            const section = headingEl.closest('.collapsible-section');
+            if (section) section.classList.toggle('open');
+        }
+
+        // 切换歌单显示/隐藏
+        function togglePlaylist(element) {
+            const content = element.nextElementSibling;
+            const isOpen = content.classList.contains('open');
+
+            // 关闭所有其他歌单
+            document.querySelectorAll('.playlist-content').forEach(el => {
+                el.classList.remove('open');
+            });
+
+            // 切换当前歌单
+            if (!isOpen) {
+                content.classList.add('open');
+                // 懒加载 iframe：第一次打开时把 data-src 写入 src
+                const ifr = content.querySelector('iframe[data-src]');
+                if (ifr) {
+                    ifr.src = ifr.getAttribute('data-src');
+                    ifr.removeAttribute('data-src');
+                }
+            }
+        }
+
+        // 实际部署时使用的fetch函数 - 支持从JSON文件读取
+        function loadPageWithFetch(pageName) {
+            const content = document.getElementById('content');
+            
+            // 更新导航激活状态
+            document.querySelectorAll('#navbar span').forEach(span => {
+                span.classList.remove('active');
+                if (span.getAttribute('data-page') === pageName) {
+                    span.classList.add('active');
+                }
+            });
+            
+            content.style.opacity = '0';
+            
+            // 特殊处理 kazhi 页面
+            if (pageName === 'kazhi') {
+                Promise.all([
+                    fetch('data/weibo.json').then(response => response.json()),
+                    fetch('data/weibo2.json').then(response => response.json())
+                ])
+                .then(([data1, data2]) => {
+                    // 合并两个文件的weibo数据
+                    const mergedData = {
+                        weibo: [...(data1.weibo || []), ...(data2.weibo || [])]
+                    };
+                    
+                    setTimeout(() => {
+                        // 更新全局weiboData
+                        weiboData.weibo = mergedData.weibo;
+                        renderKazhi(mergedData);
+                        
+                        // 淡入效果
+                        setTimeout(() => {
+                            content.style.opacity = '1';
+                        }, 50);
+                    }, 300);
+                })
+                .catch(error => {
+                    console.error('Error loading weibo data:', error);
+                    setTimeout(() => {
+                        content.innerHTML = '<p class="error">页面加载失败</p>';
+                        content.style.opacity = '1';
+                    }, 300);
+                });
+                return; // 提前返回，避免执行后面的通用逻辑
+            }
+            
+            // 其他页面的通用处理
+            // say 页面读 columns.json（9 宫格 = 专栏 hub）
+            const fileMap = { say: 'columns.json' };
+            const dataFile = fileMap[pageName] || `${pageName}.json`;
+
+            fetch(`data/${dataFile}`)
+                .then(response => response.json())
+                .then(data => {
+                    setTimeout(() => {
+                        if (pageName === 'say') {
+                            renderSayGrid(data); // 9 宫格 = 专栏 hub
+                        } else if (pageName === 'cooking') {
+                            renderCooking(data);
+                        } else if (pageName === 'listening') {
+                            renderListening(data);
+                        } else if (pageName === 'quarters') {
+                            renderQuarters(data);
+                        }
+
+                        // 淡入效果
+                        setTimeout(() => {
+                            content.style.opacity = '1';
+                        }, 50);
+                    }, 300);
+                })
+                .catch(error => {
+                    console.error('Error loading page:', error);
+                    setTimeout(() => {
+                        content.innerHTML = '<p class="error">页面加载失败</p>';
+                        content.style.opacity = '1';
+                    }, 300);
+                });
+        }
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 绑定导航点击事件
+            document.querySelectorAll('#navbar span').forEach(item => {
+                item.onclick = () => {
+                    loadPageWithFetch(item.getAttribute('data-page'));
+                };
+            });
+            
+            // 默认加载咔滋页面
+            loadPageWithFetch('kazhi');
+
+            // 点击遮罩关闭详情弹窗
+            document.getElementById('detailOverlay').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeDetail();
+                }
+            });
+
+            // ESC键关闭详情弹窗
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    closeDetail();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

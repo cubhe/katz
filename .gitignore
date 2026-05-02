@@ -1,0 +1,18 @@
+# NetEase 登录态：含 session token，绝不能上传
+scripts/.cookie
+
+# 依赖
+scripts/node_modules/
+node_modules/
+
+# 临时文件
+scripts/qr.png
+*.log
+.DS_Store
+
+# 网易云原始抓取（个人数据 + 体积大；网站需要的小版本已经在 data/）
+scripts/liked-full.json
+scripts/liked.json
+scripts/liked-stats.json
+scripts/playlists-raw.json
+scripts/playlists-with-tracks.json
