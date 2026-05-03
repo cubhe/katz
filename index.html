@@ -8,13 +8,23 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=Noto+Serif+SC:wght@200;300;400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js" defer></script>
+    <script src="enhance.js" defer></script>
 </head>
 <body>
+    <!-- Scene layer (Phase 4): grain + vignette + animated canvas line field.
+         Behind everything via z-index 0; #content sits at z-index 1. -->
+    <div class="scene-layer" aria-hidden="true">
+        <canvas class="scene-canvas"></canvas>
+        <div class="scene-grain"></div>
+        <div class="scene-vignette"></div>
+    </div>
+
     <nav id="navbar">
-        <span data-page="kazhi">咔滋</span>
-        <span data-page="say">咔言咔语</span>
-        <span data-page="cooking">Deep Cooking</span>
-        <span data-page="listening">Deep Listening</span>
+        <span data-page="kazhi"     data-cursor-label="Go">咔滋</span>
+        <span data-page="say"       data-cursor-label="Go">咔言咔语</span>
+        <span data-page="cooking"   data-cursor-label="Go">Deep Cooking</span>
+        <span data-page="listening" data-cursor-label="Go">Deep Listening</span>
     </nav>
     
     <div id="content"></div>
@@ -22,11 +32,23 @@
     <!-- 详细内容弹窗 - 仅用于咔言咔语页面 -->
     <div class="detail-overlay" id="detailOverlay">
         <div class="detail-content">
-            <button class="close-btn" onclick="closeDetail()">&times;</button>
+            <button class="close-btn" onclick="closeDetail()" data-cursor-label="Close">&times;</button>
             <h2 class="detail-title" id="detailTitle"></h2>
             <div id="detailBody"></div>
         </div>
     </div>
+
+    <!-- 编辑式增强层：自定义光标 + 项目悬停预览（仅在 fine pointer + 非 reduced-motion 环境下激活） -->
+    <div class="cursor" aria-hidden="true">
+        <div class="cursor__dot"></div>
+        <div class="cursor__ring"></div>
+        <div class="cursor__label">View</div>
+    </div>
+    <aside class="hover-preview" aria-hidden="true">
+        <div class="hover-preview__art"></div>
+        <div class="hover-preview__title"></div>
+        <div class="hover-preview__meta"></div>
+    </aside>
     
     <script>
         // 模拟数据 - 实际部署时应从服务器加载
@@ -324,6 +346,557 @@
                     <p class="kazhi-text">${weiboText}</p>
                 </div>
             `;
+        }
+
+        /* =====================================================================
+           Field Guide Home (Plan 3)
+           Hero (eyebrow + title + intro + Timeline/Random buttons + slip zone)
+           + reverse-chronological S-curve PhD timeline + side memory shards.
+           Reuses: getRandomWeiboFromDaily / formatWeiboText / formatDate
+                   showEssayDetail (via 'quarters' source)
+           Does NOT touch: any other render*(), enhance.js, JSON shape.
+           ===================================================================== */
+
+        // Cache the Field Guide payload so detail-overlay (showEssayDetail) can
+        // resolve quarter ids regardless of which view is currently mounted.
+        let fieldGuideQuarters = null;
+        // Local RAF token for Field Guide motion (timeline progress + shard
+        // tilt). Cancelled when navigating away from kazhi page.
+        let fieldGuideRAF = null;
+
+        // Stable string hash → seed (mulberry32). Same as enhance.js's
+        // hover-preview generator so visual identity is consistent.
+        function _fgHash(str) {
+            let h = 5381;
+            for (let i = 0; i < (str || '').length; i++) {
+                h = ((h << 5) + h) + str.charCodeAt(i);
+                h = h & h;
+            }
+            return Math.abs(h) >>> 0;
+        }
+        function _fgRng(seed) {
+            let t = seed >>> 0;
+            return function () {
+                t = (t + 0x6D2B79F5) | 0;
+                let x = Math.imul(t ^ (t >>> 15), 1 | t);
+                x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x;
+                return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+            };
+        }
+
+        // S-curve geometry: build cubic-bezier path that snakes left/right
+        // through `count` evenly-spaced y stops. Returns SVG path d-string +
+        // an array of node positions (for absolute-placed node tiles).
+        // The path starts AT the first stop (no center pre-swing) so each
+        // segment between stops is geometrically uniform — important so that
+        // path length distributes evenly along scroll progress.
+        function _fgSCurveGeometry(count, width, spacing, padTop) {
+            const amp  = width * 0.36;          // horizontal swing
+            // With odd count and i=0 starting on the right, there's one more
+            // right-side stop than left → the path's centroid drifts right by
+            // (amp / count). Offset x0 leftward by exactly that amount so the
+            // curve's visual center lands on the SVG horizontal center line.
+            const rightCount = Math.ceil(count / 2);
+            const leftCount  = Math.floor(count / 2);
+            const x0 = width * 0.5 - ((rightCount - leftCount) * amp) / count;
+            const stops = [];                   // {x, y, side}
+            for (let i = 0; i < count; i++) {
+                const y = padTop + i * spacing;
+                // alternating sides: 0=right, 1=left, 2=right, ...
+                const side = i % 2 === 0 ? 1 : -1; // +1 right, -1 left
+                stops.push({ x: x0 + side * amp, y: y, side: side > 0 ? 'right' : 'left' });
+            }
+            // Start path AT first stop — no pre-swing from center. Each
+            // segment uses vertical-tangent bezier handles so the curve
+            // enters/exits each node smoothly. With identical spacing & amp,
+            // every segment has the same length → progress maps linearly.
+            let d = `M ${stops[0].x.toFixed(2)} ${stops[0].y.toFixed(2)}`;
+            const handle = spacing * 0.55;
+            for (let i = 1; i < stops.length; i++) {
+                const a = stops[i - 1], b = stops[i];
+                d += ` C ${a.x.toFixed(2)} ${(a.y + handle).toFixed(2)}, ` +
+                     `${b.x.toFixed(2)} ${(b.y - handle).toFixed(2)}, ` +
+                     `${b.x.toFixed(2)} ${b.y.toFixed(2)}`;
+            }
+            return { d, stops };
+        }
+
+        // Memory shard inline SVG generator. Stable per id. 3:4 portrait.
+        // Layered hairline contours + grid + faint noise. Same slot dims as
+        // future <img loading="lazy" src="..."> swap; no layout change needed.
+        function _fgShardArt(idStr) {
+            const seed = _fgHash(idStr);
+            const rng  = _fgRng(seed);
+            const palette = [
+                'rgba(26,26,20,0.20)',
+                'rgba(168,90,58,0.22)',
+                'rgba(91,107,74,0.20)'
+            ];
+            const stroke = palette[seed % palette.length];
+            const VBW = 90, VBH = 120; // 3:4
+            let out = '';
+            // 1. soft paper tint base block (so the shard isn't pure transparent)
+            out += `<rect x="0" y="0" width="${VBW}" height="${VBH}" fill="rgba(251,247,238,0.92)"/>`;
+            // 2. corner crop ticks (editorial)
+            const tick = 4;
+            out += `<path d="M0 ${tick} L0 0 L${tick} 0" stroke="${stroke}" stroke-width="0.6" fill="none"/>`;
+            out += `<path d="M${VBW - tick} 0 L${VBW} 0 L${VBW} ${tick}" stroke="${stroke}" stroke-width="0.6" fill="none"/>`;
+            out += `<path d="M0 ${VBH - tick} L0 ${VBH} L${tick} ${VBH}" stroke="${stroke}" stroke-width="0.6" fill="none"/>`;
+            out += `<path d="M${VBW - tick} ${VBH} L${VBW} ${VBH} L${VBW} ${VBH - tick}" stroke="${stroke}" stroke-width="0.6" fill="none"/>`;
+            // 3. one of three contour styles (rng-picked)
+            const style = Math.floor(rng() * 3);
+            if (style === 0) {
+                // contour rings off-center
+                const cx = 18 + rng() * 54;
+                const cy = 30 + rng() * 60;
+                for (let i = 0; i < 7; i++) {
+                    const r = 6 + i * (5 + rng() * 2.5);
+                    out += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" stroke="${stroke}" fill="none" stroke-width="0.5"/>`;
+                }
+            } else if (style === 1) {
+                // sine-wave field
+                for (let i = 0; i < 6; i++) {
+                    const baseY = 14 + i * 17 + rng() * 3;
+                    const amp = 3 + rng() * 4;
+                    const phase = rng() * 6.28;
+                    let p = `M 0 ${baseY.toFixed(2)}`;
+                    for (let x = 4; x <= VBW; x += 4) {
+                        const y = baseY + Math.sin(x * 0.07 + phase) * amp;
+                        p += ` L ${x} ${y.toFixed(2)}`;
+                    }
+                    out += `<path d="${p}" stroke="${stroke}" fill="none" stroke-width="0.55"/>`;
+                }
+            } else {
+                // diagonal hatch
+                for (let i = 0; i < 14; i++) {
+                    const offset = i * 9 + rng() * 4;
+                    out += `<line x1="${offset.toFixed(1)}" y1="0" x2="${(offset - VBH).toFixed(1)}" y2="${VBH}" stroke="${stroke}" stroke-width="0.5"/>`;
+                }
+            }
+            // 4. soft hairline grid overlay (very faint, always present)
+            for (let i = 1; i < 6; i++) {
+                const y = (i / 6) * VBH;
+                out += `<line x1="0" y1="${y.toFixed(2)}" x2="${VBW}" y2="${y.toFixed(2)}" stroke="rgba(26,26,20,0.05)" stroke-width="0.3"/>`;
+            }
+            return `<svg viewBox="0 0 ${VBW} ${VBH}" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block">${out}</svg>`;
+        }
+
+        // Random Memory Slip — reuses formatWeiboText / formatDate / getRandomWeiboFromDaily.
+        // Replace mode: old slip fades out (160ms), then new one slides in (280ms).
+        function renderRandomSlip(zone, weiboData) {
+            if (!zone || !weiboData || !Array.isArray(weiboData.weibo) || weiboData.weibo.length === 0) return;
+            const pick = getRandomWeiboFromDaily(weiboData);
+            const slipText = formatWeiboText(pick.text);
+            const slipDate = formatDate(pick.createdAt);
+
+            const old = zone.querySelector('.memory-slip');
+            const mountNew = () => {
+                const slip = document.createElement('article');
+                slip.className = 'memory-slip is-entering';
+                slip.innerHTML =
+                    `<header class="slip-meta">随机回忆 · ${slipDate}</header>` +
+                    `<p class="slip-text">${slipText}</p>`;
+                zone.appendChild(slip);
+                // next frame: drop is-entering so the CSS transition fires
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => slip.classList.remove('is-entering'));
+                });
+            };
+            if (old) {
+                old.classList.add('is-leaving');
+                setTimeout(() => {
+                    if (old.parentNode) old.parentNode.removeChild(old);
+                    mountNew();
+                }, 180);
+            } else {
+                mountNew();
+            }
+        }
+
+        // Smooth scroll to #timeline. Prefer Lenis when present; fallback to
+        // scrollIntoView. Adds body.is-entering-timeline for ~1.6s so CSS can
+        // subtly fade/scale the hero during the journey.
+        function _fgScrollToTimeline() {
+            const target = document.getElementById('timeline');
+            if (!target) return;
+            document.body.classList.add('is-entering-timeline');
+            const cleanup = () => document.body.classList.remove('is-entering-timeline');
+            if (window.lenis && typeof window.lenis.scrollTo === 'function') {
+                window.lenis.scrollTo(target, {
+                    duration: 1.6,
+                    easing: t => 1 - Math.pow(1 - t, 4),
+                    onComplete: cleanup
+                });
+                // Failsafe in case lenis onComplete doesn't fire
+                setTimeout(cleanup, 2200);
+            } else {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                setTimeout(cleanup, 1800);
+            }
+        }
+
+        // Local motion runtime for the Field Guide: scroll progress + shard
+        // mouse-tilt. Cancels itself when the timeline element leaves the DOM
+        // (i.e. user navigated to another page). All work behind reduced-motion
+        // and pointer-coarse gates.
+        //
+        // Progress anchor: viewport center against actual first/last node rects.
+        //   p = 0  when viewport center hits the FIRST quarter node
+        //   p = 1  when viewport center hits the LAST quarter node
+        // This guarantees the accent stroke reaches the bottom right when the
+        // user reads the last quarter — no over-shoot into footer padding.
+        function _fgInitMotion() {
+            if (fieldGuideRAF) cancelAnimationFrame(fieldGuideRAF), fieldGuideRAF = null;
+            const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            const finePointer  = window.matchMedia('(pointer: fine)').matches;
+            const tlEl  = document.getElementById('timeline');
+            const shell = document.querySelector('.field-guide-shell');
+            if (!tlEl) return;
+
+            // Cache shards from shell (rails now span hero + timeline) with
+            // fallback to tlEl for resilience.
+            const shardScope = shell || tlEl;
+            const shards = Array.from(shardScope.querySelectorAll('.memory-shard'));
+            const sCurveBase   = tlEl.querySelector('.s-curve-base');
+            const sCurveAccent = tlEl.querySelector('.s-curve-accent');
+            const sCurveLen    = sCurveAccent ? sCurveAccent.getTotalLength() : 0;
+            if (sCurveLen > 0) {
+                if (sCurveBase) {
+                    sCurveBase.style.strokeDasharray  = `${sCurveLen}`;
+                    sCurveBase.style.strokeDashoffset = `${sCurveLen}`;
+                }
+                if (sCurveAccent) {
+                    sCurveAccent.style.strokeDasharray  = `${sCurveLen}`;
+                    sCurveAccent.style.strokeDashoffset = `${sCurveLen}`;
+                }
+            }
+
+            // Cache first/last node refs for scroll-progress anchoring.
+            const nodes = tlEl.querySelectorAll('.tl-node');
+            const firstNode = nodes[0] || null;
+            const lastNode  = nodes[nodes.length - 1] || null;
+
+            // Compute scroll progress 0..1 from first-node center → last-node center.
+            // Reading getBoundingClientRect each frame is fine — these are leaf-ish
+            // elements and the read happens once per RAF.
+            function computeProgress() {
+                if (!firstNode || !lastNode) return 0;
+                const fr = firstNode.getBoundingClientRect();
+                const lr = lastNode.getBoundingClientRect();
+                const firstY = fr.top + fr.height * 0.5;
+                const lastY  = lr.top + lr.height * 0.5;
+                if (lastY === firstY) return 0;
+                const center = (window.innerHeight || 800) * 0.5;
+                const p = (center - firstY) / (lastY - firstY);
+                return p < 0 ? 0 : (p > 1 ? 1 : p);
+            }
+
+            // Reveal observer: fade shards & nodes in once, then unobserve.
+            if ('IntersectionObserver' in window) {
+                const io = new IntersectionObserver((entries) => {
+                    entries.forEach(e => {
+                        if (e.isIntersecting) {
+                            e.target.classList.add('is-visible');
+                            io.unobserve(e.target);
+                        }
+                    });
+                }, { rootMargin: '0px 0px -10% 0px', threshold: 0.05 });
+                tlEl.querySelectorAll('.tl-node').forEach(el => io.observe(el));
+                shardScope.querySelectorAll('.memory-shard').forEach(el => io.observe(el));
+                // S curve "draws in" once it enters viewport
+                const sCurveSvg = tlEl.querySelector('.s-curve-svg');
+                if (sCurveSvg) {
+                    const ioSvg = new IntersectionObserver((entries) => {
+                        entries.forEach(e => {
+                            if (e.isIntersecting) {
+                                sCurveSvg.classList.add('is-drawn');
+                                ioSvg.unobserve(e.target);
+                            }
+                        });
+                    }, { threshold: 0.04 });
+                    ioSvg.observe(sCurveSvg);
+                }
+            } else {
+                // Old browsers: just show everything
+                tlEl.querySelectorAll('.tl-node').forEach(el => el.classList.add('is-visible'));
+                shardScope.querySelectorAll('.memory-shard').forEach(el => el.classList.add('is-visible'));
+                const sCurveSvg = tlEl.querySelector('.s-curve-svg');
+                if (sCurveSvg) sCurveSvg.classList.add('is-drawn');
+            }
+
+            // Helper: write accent dashoffset from progress (no transition; CSS
+            // transition was removed — was creating perpetual scroll lag).
+            function writeAccent(p) {
+                if (sCurveAccent && sCurveLen > 0) {
+                    sCurveAccent.style.strokeDashoffset = `${(sCurveLen * (1 - p)).toFixed(2)}`;
+                }
+            }
+
+            // Reduced motion / no shards / coarse pointer → skip RAF; still
+            // drive accent on scroll events with the same node-anchored progress.
+            if (reduceMotion || !finePointer || shards.length === 0) {
+                if (sCurveAccent && sCurveLen > 0) {
+                    const updateAccent = () => writeAccent(computeProgress());
+                    updateAccent();
+                    window.addEventListener('scroll', updateAccent, { passive: true });
+                }
+                return;
+            }
+
+            // Track mouse position + velocity for shard tilt
+            const mouse = { x: -9999, y: -9999, vx: 0, vy: 0, lx: 0, ly: 0 };
+            window.addEventListener('mousemove', (e) => {
+                mouse.x = e.clientX;
+                mouse.y = e.clientY;
+            });
+
+            // Per-shard tilt state (lerped)
+            const shardState = shards.map(() => ({ rx: 0, ry: 0 }));
+
+            function tick() {
+                // bail out if user navigated away
+                if (!document.body.contains(tlEl)) {
+                    fieldGuideRAF = null;
+                    return;
+                }
+                // pointer velocity
+                mouse.vx = mouse.x - mouse.lx;
+                mouse.vy = mouse.y - mouse.ly;
+                mouse.lx = mouse.x;
+                mouse.ly = mouse.y;
+
+                // S-curve accent stroke from scroll progress (node-anchored)
+                writeAccent(computeProgress());
+
+                // Shard tilt: rotate gently when mouse is nearby; lerp back to 0 otherwise
+                for (let i = 0; i < shards.length; i++) {
+                    const sh = shards[i];
+                    const st = shardState[i];
+                    const r = sh.getBoundingClientRect();
+                    const cx = r.left + r.width  * 0.5;
+                    const cy = r.top  + r.height * 0.5;
+                    const dx = mouse.x - cx;
+                    const dy = mouse.y - cy;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const NEAR = 280;
+                    let targetRy = 0, targetRx = 0;
+                    if (dist < NEAR) {
+                        const f = 1 - (dist / NEAR);     // 0..1, closer = stronger
+                        const gain = 0.35;
+                        targetRy = Math.max(-7, Math.min(7,  mouse.vx * gain * f));
+                        targetRx = Math.max(-7, Math.min(7, -mouse.vy * gain * f));
+                    }
+                    st.ry += (targetRy - st.ry) * 0.12;
+                    st.rx += (targetRx - st.rx) * 0.12;
+                    sh.style.setProperty('--tx', st.ry.toFixed(2) + 'deg');
+                    sh.style.setProperty('--ty', st.rx.toFixed(2) + 'deg');
+                }
+                fieldGuideRAF = requestAnimationFrame(tick);
+            }
+            fieldGuideRAF = requestAnimationFrame(tick);
+        }
+
+        // Main render. wbData = { weibo: [...] }; qData = { intro, quarters: [...] }.
+        // Param names intentionally avoid shadowing the top-level `weiboData` /
+        // `quartersData` caches that showEssayDetail / renderKazhi read from.
+        function renderFieldGuideHome(wbData, qData) {
+            const content = document.getElementById('content');
+            fieldGuideQuarters = qData;
+            // Sync the top-level quartersData cache so showEssayDetail('quarters', id)
+            // can resolve quarter ids when the user clicks "Read more" from the home
+            // timeline (it normally only gets populated when /quarters route is hit).
+            quartersData = qData;
+            // Cancel previous RAF if user re-navigated to kazhi quickly
+            if (fieldGuideRAF) { cancelAnimationFrame(fieldGuideRAF); fieldGuideRAF = null; }
+
+            // Reverse chronological: newest at top
+            const quarters = (qData.quarters || []).slice().reverse();
+
+            // Geometry
+            const N = quarters.length;
+            const SVG_W   = 720;     // intrinsic; scales via CSS
+            const PAD_TOP = 120;
+            const SPACING = 380;     // generous, room to insert articles between
+            const PAD_BOT = 160;
+            const SVG_H   = PAD_TOP + (N - 1) * SPACING + PAD_BOT;
+            const geom    = _fgSCurveGeometry(N, SVG_W, SPACING, PAD_TOP);
+
+            // Memory shards — 20 total (10 per side), placed semi-randomly in
+            // their .memory-column with varied sizes (small ↔ large) so the
+            // sides feel scattered rather than gridded. Each column's height
+            // matches the SVG curve, so `top%` maps to vertical scroll position.
+            const SHARD_COUNT = 20;
+            const shardSeeds = [];
+            const captionPool = [
+                'a kitchen on monday', 'fog over the bay', 'cat on the windowsill',
+                'late jasmine tea', 'the long walk back', 'a borrowed afternoon',
+                'wet sequoia bark', 'small print in chinese', 'unfinished postcard',
+                'the bright noise of summer', 'rain on the cycle path', 'a folded receipt',
+                'midwinter aircon hum', 'tide pool, low light', 'second cup of the day',
+                'a sticker on a window', 'noon shadow on rice', 'unsent draft #4',
+                'cyclamen, february', 'salt on the lower lip'
+            ];
+            // Track per-side index to spread evenly within each column
+            const sideCounts = { left: 0, right: 0 };
+            for (let i = 0; i < SHARD_COUNT; i++) {
+                const side = i % 2 === 0 ? 'left' : 'right';
+                const id = 'shard-' + i;
+                const rng = _fgRng(_fgHash(id) ^ (i * 73));
+                const sideIdx = sideCounts[side]++;
+                const perSide = Math.ceil(SHARD_COUNT / 2); // 10
+                // Even per-side spacing baseline + ±half-slot random jitter
+                // so positions look scattered but never bunch up.
+                const slot = sideIdx / Math.max(1, perSide - 1);   // 0..1
+                const slotSize = 100 / perSide;                    // % per slot
+                const jitter = (rng() - 0.5) * slotSize * 0.85;
+                const top = 2 + slot * 96 + jitter;
+                // Wider variety of widths: 90-240px
+                const width = 90 + Math.floor(rng() * 150);
+                // Slight horizontal jitter within column (in addition to base offset)
+                const xOffset = Math.floor(rng() * 28);            // 0-28px
+                shardSeeds.push({
+                    id,
+                    side,
+                    top: Math.max(1, Math.min(98, top)),
+                    rotate: (rng() - 0.5) * 8,        // -4..4 deg
+                    width,
+                    xOffset,
+                    caption: captionPool[i % captionPool.length]
+                });
+            }
+
+            // Nodes HTML (absolutely positioned over SVG via inline style top/left)
+            let nodesHtml = '';
+            quarters.forEach((q, i) => {
+                const stop = geom.stops[i];
+                const sideClass = stop.side; // 'left' or 'right'
+                // Convert SVG coords (intrinsic 720 wide) → percentages of the SVG box
+                const leftPct = (stop.x / SVG_W) * 100;
+                const topPx   = stop.y;
+                const kw = (q.keywords || []).join(' · ');
+                nodesHtml += `
+                    <article class="tl-node tl-node--${sideClass}" data-id="${q.id}"
+                             style="--node-left: ${leftPct.toFixed(3)}%; --node-top: ${topPx}px;">
+                        <span class="tl-dot" aria-hidden="true"></span>
+                        <div class="tl-node__body">
+                            <header class="tl-node__head">
+                                <span class="tl-label">${q.label}</span>
+                                <span class="tl-meta">${q.year} · ${q.season}</span>
+                            </header>
+                            ${kw ? `<p class="tl-keywords">${kw}</p>` : ''}
+                            <p class="tl-summary">${q.summary || ''}</p>
+                            <button class="tl-read" type="button"
+                                    data-quarter-id="${q.id}"
+                                    data-cursor-label="Read"
+                                    data-cursor-mode="link">
+                                Read more →
+                            </button>
+                        </div>
+                    </article>
+                `;
+            });
+
+            // Shards HTML — left + right column children. xOffset adds horizontal
+            // jitter on top of the base alignment (right-aligned in left col,
+            // left-aligned in right col) so shards feel scattered.
+            const renderShard = (s) => `
+                <figure class="memory-shard memory-shard--${s.side}" data-id="${s.id}"
+                        style="--shard-top: ${s.top.toFixed(2)}%; --shard-rot: ${s.rotate.toFixed(2)}deg; --shard-w: ${s.width}px; --shard-xoff: ${s.xOffset}px;">
+                    <div class="shard-frame">${_fgShardArt(s.id)}</div>
+                    <figcaption class="shard-caption">${s.caption}</figcaption>
+                </figure>
+            `;
+            const leftShards  = shardSeeds.filter(s => s.side === 'left').map(renderShard).join('');
+            const rightShards = shardSeeds.filter(s => s.side === 'right').map(renderShard).join('');
+
+            content.innerHTML = `
+                <section class="field-guide-hero">
+                    <div class="fg-hero-inner">
+                        <header class="fg-hero-top">
+                            <p class="fg-eyebrow">咔滋的森林 / Field Notes</p>
+                            <p class="fg-index" aria-hidden="true">${quarters.length} quarters · ${wbData.weibo.length} memories</p>
+                        </header>
+
+                        <h1 class="fg-title">A Field Guide<br/>to Becoming</h1>
+
+                        <footer class="fg-hero-bottom">
+                            <p class="fg-intro">
+                                A personal archive of memory, research quarters,
+                                cooking notes, and repeated listening.
+                            </p>
+                            <div class="fg-actions">
+                                <button class="fg-btn fg-btn--primary" type="button"
+                                        data-action="timeline" data-cursor-label="Enter" data-cursor-mode="link">
+                                    <span class="fg-btn__num">01</span>
+                                    <span class="fg-btn__label">Timeline</span>
+                                    <span class="fg-btn__arrow" aria-hidden="true">↓</span>
+                                </button>
+                                <button class="fg-btn fg-btn--ghost" type="button"
+                                        data-action="random" data-cursor-label="Pick" data-cursor-mode="link">
+                                    <span class="fg-btn__num">02</span>
+                                    <span class="fg-btn__label">Random</span>
+                                    <span class="fg-btn__arrow" aria-hidden="true">↻</span>
+                                </button>
+                            </div>
+                        </footer>
+
+                        <div class="random-memory-zone" aria-live="polite"></div>
+                    </div>
+                    <p class="fg-scroll-hint" aria-hidden="true">scroll · 时间倒流</p>
+                </section>
+
+                <section id="timeline" class="timeline-world" style="--svg-h: ${SVG_H}px;">
+                    <header class="timeline-header">
+                        <p class="tl-eyebrow">PhD Quarters · ${quarters.length} entries</p>
+                        <h2 class="tl-title">The Long Walk Back</h2>
+                        <p class="tl-intro">From the most recent quarter to the very first. Scroll down to walk back in time.</p>
+                    </header>
+
+                    <div class="timeline-stage-grid">
+                        <div class="memory-column memory-column--left" aria-hidden="true">${leftShards}</div>
+
+                        <div class="s-curve-stage">
+                            <svg class="s-curve-svg" viewBox="0 0 ${SVG_W} ${SVG_H}"
+                                 preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                                <path class="s-curve-base"   d="${geom.d}" fill="none"
+                                      stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+                                <path class="s-curve-accent" d="${geom.d}" fill="none"
+                                      stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                            </svg>
+                            <div class="tl-nodes">${nodesHtml}</div>
+                        </div>
+
+                        <div class="memory-column memory-column--right" aria-hidden="true">${rightShards}</div>
+                    </div>
+
+                    <footer class="timeline-foot">
+                        <span class="tl-foot-rule" aria-hidden="true"></span>
+                        <p class="tl-foot-text">— end of trail —</p>
+                    </footer>
+                </section>
+            `;
+
+            // Wire actions
+            const heroSection = content.querySelector('.field-guide-hero');
+            const zone        = content.querySelector('.random-memory-zone');
+            const tlBtn       = content.querySelector('[data-action="timeline"]');
+            const rdBtn       = content.querySelector('[data-action="random"]');
+
+            if (tlBtn) tlBtn.addEventListener('click', _fgScrollToTimeline);
+            if (rdBtn) rdBtn.addEventListener('click', () => renderRandomSlip(zone, wbData));
+
+            // Quarter "Read more" → reuse showEssayDetail with 'quarters' source.
+            // (cache assignment to top-level quartersData done at function head.)
+            content.querySelectorAll('.tl-read').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const qid = btn.getAttribute('data-quarter-id');
+                    if (qid) showEssayDetail('quarters', qid);
+                });
+            });
+
+            // Defer motion init until layout settled (SVG getTotalLength needs DOM).
+            requestAnimationFrame(() => requestAnimationFrame(_fgInitMotion));
         }
 
         // 渲染咔言咔语 = 专栏 hub（9 宫格）
@@ -1087,24 +1660,28 @@
             
             content.style.opacity = '0';
             
-            // 特殊处理 kazhi 页面
+            // 特殊处理 kazhi 页面 — 现在是 Field Guide 首页：weibo + weibo2 + quarters 并行
             if (pageName === 'kazhi') {
                 Promise.all([
                     fetch('data/weibo.json').then(response => response.json()),
-                    fetch('data/weibo2.json').then(response => response.json())
+                    fetch('data/weibo2.json').then(response => response.json()),
+                    // quarters 单独 catch：缺失时降级到旧版 renderKazhi（不让首页彻底白屏）
+                    fetch('data/quarters.json').then(r => r.json()).catch(() => null)
                 ])
-                .then(([data1, data2]) => {
-                    // 合并两个文件的weibo数据
+                .then(([data1, data2, quartersData]) => {
                     const mergedData = {
                         weibo: [...(data1.weibo || []), ...(data2.weibo || [])]
                     };
-                    
+
                     setTimeout(() => {
-                        // 更新全局weiboData
                         weiboData.weibo = mergedData.weibo;
-                        renderKazhi(mergedData);
-                        
-                        // 淡入效果
+                        if (quartersData && Array.isArray(quartersData.quarters) && quartersData.quarters.length > 0) {
+                            renderFieldGuideHome(mergedData, quartersData);
+                        } else {
+                            // 降级：维持原行为
+                            renderKazhi(mergedData);
+                        }
+
                         setTimeout(() => {
                             content.style.opacity = '1';
                         }, 50);
@@ -1180,5 +1757,6 @@
             });
         });
     </script>
+
 </body>
 </html>
