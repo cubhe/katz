@@ -218,7 +218,7 @@ body[data-page="listening"] .scene-canvas { opacity: 0.62; }
 }
 
 #navbar::before {
-    content: 'カチ — 咔滋的森林';
+    content: '咔滋的森林';
     margin-right: auto;
     font-family: var(--serif-display);
     font-size: 14px;
@@ -1194,6 +1194,7 @@ body[data-page="listening"] .scene-canvas { opacity: 0.62; }
     justify-content: center;
     padding: clamp(40px, 8vh, 96px) clamp(20px, 4vw, 40px);
     overflow-y: auto;
+    overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
 }
 
@@ -1207,8 +1208,13 @@ body[data-page="listening"] .scene-canvas { opacity: 0.62; }
     background: var(--bg);
     width: 100%;
     max-width: 760px;
+    max-height: calc(100vh - 80px);
+    max-height: calc(100dvh - clamp(80px, 16vh, 192px));
     padding: clamp(40px, 6vw, 72px) clamp(28px, 5vw, 64px);
-    margin: auto;
+    margin: 0 auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     transform: translateY(28px);
     opacity: 0;
     transition: transform 480ms var(--ease-edit), opacity 360ms var(--ease-edit);
@@ -1874,14 +1880,14 @@ body.has-custom-cursor iframe {
 .field-guide-hero .fg-eyebrow,
 .field-guide-hero .fg-title,
 .field-guide-hero .fg-intro,
-.field-guide-hero .fg-actions,
+.field-guide-hero .fg-control-stack,
 .field-guide-hero .fg-scroll-hint {
     animation: fgRise 900ms var(--ease-edit) backwards;
 }
 .field-guide-hero .fg-eyebrow     { animation-delay:  60ms; }
 .field-guide-hero .fg-title       { animation-delay: 180ms; }
 .field-guide-hero .fg-intro       { animation-delay: 380ms; }
-.field-guide-hero .fg-actions     { animation-delay: 520ms; }
+.field-guide-hero .fg-control-stack { animation-delay: 520ms; }
 .field-guide-hero .fg-scroll-hint { animation-delay: 720ms; }
 
 .fg-eyebrow {
@@ -1948,6 +1954,16 @@ body.has-custom-cursor iframe {
        1fr 1fr guarantees both buttons stay on the same row and share width
        no matter how narrow the right column gets. Single column on mobile.
    ------------------------------------------------------------------------- */
+.fg-control-stack {
+    display: grid;
+    gap: var(--s-2);
+    width: min(560px, 100%);
+    justify-self: end;
+    align-self: end;
+    position: relative;
+    isolation: isolate;
+}
+
 .fg-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -1955,6 +1971,7 @@ body.has-custom-cursor iframe {
     margin: 0;
     min-width: 280px;
     max-width: 460px;
+    width: min(460px, 100%);
     justify-self: end;       /* hug the right edge of the bottom row */
 }
 
@@ -2026,12 +2043,19 @@ body.has-custom-cursor iframe {
    19. Random memory slip
    ------------------------------------------------------------------------- */
 .random-memory-zone {
-    margin-top: var(--s-3);
-    min-height: 0;          /* grows with content */
-    max-width: 640px;
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + clamp(44px, 8vh, 112px));
+    min-height: 0;
+    width: min(560px, 100%);
+    max-width: 560px;
+    display: grid;
+    align-items: end;
     /* Justify-self end so the slip appears on the right, near the buttons
        that triggered it. Preserves the widescreen rhythm. */
     justify-self: end;
+    z-index: 4;
+    pointer-events: none;
 }
 
 .memory-slip {
@@ -2040,6 +2064,11 @@ body.has-custom-cursor iframe {
     border-left: 2px solid var(--accent);
     padding: var(--s-4) var(--s-4);
     position: relative;
+    max-height: clamp(150px, 24vh, 280px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    pointer-events: auto;
     transform-origin: 0 50%;
     /* enter state set inline via .is-entering, then removed */
     transition: opacity 280ms var(--ease-edit),
@@ -2076,6 +2105,25 @@ body.has-custom-cursor iframe {
     color: var(--ink);
     margin: 0;
     letter-spacing: 0.005em;
+    overflow-wrap: anywhere;
+}
+
+.memory-slip--long {
+    padding: var(--s-3);
+    max-height: clamp(150px, 22vh, 250px);
+}
+.memory-slip--long .slip-text {
+    font-size: clamp(14px, 1.15vw, 16px);
+    line-height: 1.68;
+}
+
+.memory-slip--dense {
+    padding: var(--s-3);
+    max-height: clamp(150px, 20vh, 230px);
+}
+.memory-slip--dense .slip-text {
+    font-size: clamp(13px, 1vw, 15px);
+    line-height: 1.58;
 }
 
 /* -------------------------------------------------------------------------
@@ -2247,13 +2295,13 @@ body.has-custom-cursor iframe {
     transform: translateY(-50%);
 }
 .tl-node--right .tl-node__body {
-    left: 38px;
+    left: calc(50% + 64px);
     text-align: left;
     border-left: 1px solid var(--rule);
     padding-left: var(--s-3);
 }
 .tl-node--left .tl-node__body {
-    right: 38px;
+    right: calc(50% + 64px);
     text-align: right;
     border-right: 1px solid var(--rule);
     padding-right: var(--s-3);
@@ -2469,9 +2517,23 @@ body.is-entering-timeline .field-guide-hero {
         gap: 24px;
         align-items: start;
     }
+    .fg-control-stack { justify-self: stretch; width: 100%; }
     .fg-actions { grid-template-columns: 1fr; gap: var(--s-2); justify-self: stretch; max-width: none; }
     .fg-btn { width: 100%; }
-    .random-memory-zone { justify-self: stretch; max-width: none; }
+    .random-memory-zone {
+        left: 0;
+        right: 0;
+        bottom: calc(100% + 20px);
+        justify-self: stretch;
+        width: 100%;
+        max-width: none;
+        min-height: 0;
+    }
+    .memory-slip,
+    .memory-slip--long,
+    .memory-slip--dense {
+        max-height: 240px;
+    }
 
     .timeline-world {
         margin-top: 56px;

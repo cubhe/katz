@@ -282,6 +282,28 @@
             return data.weibo[selectedIndex];
         }
 
+        function getWeiboKey(weibo) {
+            if (!weibo) return '';
+            const raw = `${weibo.createdAt || ''}::${weibo.text || ''}`;
+            let hash = 0;
+            for (let i = 0; i < raw.length; i++) {
+                hash = ((hash << 5) - hash) + raw.charCodeAt(i);
+                hash |= 0;
+            }
+            return `${weibo.createdAt || ''}::${Math.abs(hash)}`;
+        }
+
+        function getRandomWeiboFromDailyExcept(data, excludedKey) {
+            const dailyIndices = getDailyRandomIndices(data.weibo.length, 100);
+            const candidates = dailyIndices
+                .map(index => data.weibo[index])
+                .filter(Boolean)
+                .filter(weibo => getWeiboKey(weibo) !== excludedKey);
+
+            const pool = candidates.length > 0 ? candidates : data.weibo;
+            return pool[Math.floor(Math.random() * pool.length)];
+        }
+
 
         // 解析日期字符串
         function parseWeiboDate(dateStr) {
@@ -384,14 +406,18 @@
             };
         }
 
+        function _fgQuarterMonth(q) {
+            const seasonMonth = { winter: 1, spring: 3, summer: 6, fall: 9 };
+            const month = seasonMonth[String(q.season || '').toLowerCase()] || 1;
+            return { month, monthIndex: q.year * 12 + (month - 1), label: `${q.year}.${month}` };
+        }
+
         // S-curve geometry: build cubic-bezier path that snakes left/right
-        // through `count` evenly-spaced y stops. Returns SVG path d-string +
-        // an array of node positions (for absolute-placed node tiles).
-        // The path starts AT the first stop (no center pre-swing) so each
-        // segment between stops is geometrically uniform — important so that
-        // path length distributes evenly along scroll progress.
-        function _fgSCurveGeometry(count, width, spacing, padTop) {
-            const amp  = width * 0.36;          // horizontal swing
+        // through calendar-scaled quarter stops. Display order is preserved
+        // (newest at top), while vertical distance reflects real month gaps.
+        function _fgSCurveGeometry(quarters, width, padTop, monthPx) {
+            const count = quarters.length;
+            const amp  = width * 0.24;          // narrower swing: keep dots away from article copy
             // With odd count and i=0 starting on the right, there's one more
             // right-side stop than left → the path's centroid drifts right by
             // (amp / count). Offset x0 leftward by exactly that amount so the
@@ -399,21 +425,27 @@
             const rightCount = Math.ceil(count / 2);
             const leftCount  = Math.floor(count / 2);
             const x0 = width * 0.5 - ((rightCount - leftCount) * amp) / count;
+            const months = quarters.map(_fgQuarterMonth);
+            const maxMonth = Math.max(...months.map(m => m.monthIndex));
             const stops = [];                   // {x, y, side}
             for (let i = 0; i < count; i++) {
-                const y = padTop + i * spacing;
+                const date = months[i];
+                const y = padTop + (maxMonth - date.monthIndex) * monthPx;
                 // alternating sides: 0=right, 1=left, 2=right, ...
                 const side = i % 2 === 0 ? 1 : -1; // +1 right, -1 left
-                stops.push({ x: x0 + side * amp, y: y, side: side > 0 ? 'right' : 'left' });
+                stops.push({
+                    x: x0 + side * amp,
+                    y: y,
+                    side: side > 0 ? 'right' : 'left',
+                    dateLabel: date.label
+                });
             }
-            // Start path AT first stop — no pre-swing from center. Each
-            // segment uses vertical-tangent bezier handles so the curve
-            // enters/exits each node smoothly. With identical spacing & amp,
-            // every segment has the same length → progress maps linearly.
+            // Start path AT first stop — no pre-swing from center. Each segment
+            // uses vertical-tangent bezier handles based on its actual y gap.
             let d = `M ${stops[0].x.toFixed(2)} ${stops[0].y.toFixed(2)}`;
-            const handle = spacing * 0.55;
             for (let i = 1; i < stops.length; i++) {
                 const a = stops[i - 1], b = stops[i];
+                const handle = Math.abs(b.y - a.y) * 0.55;
                 d += ` C ${a.x.toFixed(2)} ${(a.y + handle).toFixed(2)}, ` +
                      `${b.x.toFixed(2)} ${(b.y - handle).toFixed(2)}, ` +
                      `${b.x.toFixed(2)} ${b.y.toFixed(2)}`;
@@ -485,14 +517,23 @@
         // Replace mode: old slip fades out (160ms), then new one slides in (280ms).
         function renderRandomSlip(zone, weiboData) {
             if (!zone || !weiboData || !Array.isArray(weiboData.weibo) || weiboData.weibo.length === 0) return;
-            const pick = getRandomWeiboFromDaily(weiboData);
+            if (zone._randomSlipTimer) {
+                clearTimeout(zone._randomSlipTimer);
+                zone._randomSlipTimer = null;
+            }
+            const pick = getRandomWeiboFromDailyExcept(weiboData, zone.dataset.activeWeiboKey || '');
+            zone.dataset.activeWeiboKey = getWeiboKey(pick);
             const slipText = formatWeiboText(pick.text);
             const slipDate = formatDate(pick.createdAt);
 
             const old = zone.querySelector('.memory-slip');
             const mountNew = () => {
                 const slip = document.createElement('article');
-                slip.className = 'memory-slip is-entering';
+                const textLength = slipText.length;
+                const densityClass = textLength > 360
+                    ? ' memory-slip--dense'
+                    : (textLength > 220 ? ' memory-slip--long' : '');
+                slip.className = `memory-slip${densityClass} is-entering`;
                 slip.innerHTML =
                     `<header class="slip-meta">随机回忆 · ${slipDate}</header>` +
                     `<p class="slip-text">${slipText}</p>`;
@@ -504,9 +545,10 @@
             };
             if (old) {
                 old.classList.add('is-leaving');
-                setTimeout(() => {
-                    if (old.parentNode) old.parentNode.removeChild(old);
+                zone._randomSlipTimer = setTimeout(() => {
+                    zone.querySelectorAll('.memory-slip').forEach(slip => slip.remove());
                     mountNew();
+                    zone._randomSlipTimer = null;
                 }, 180);
             } else {
                 mountNew();
@@ -715,11 +757,14 @@
             // Geometry
             const N = quarters.length;
             const SVG_W   = 720;     // intrinsic; scales via CSS
-            const PAD_TOP = 120;
-            const SPACING = 380;     // generous, room to insert articles between
-            const PAD_BOT = 160;
-            const SVG_H   = PAD_TOP + (N - 1) * SPACING + PAD_BOT;
-            const geom    = _fgSCurveGeometry(N, SVG_W, SPACING, PAD_TOP);
+            const PAD_TOP = 140;
+            const PAD_BOT = 200;
+            const quarterMonths = quarters.map(_fgQuarterMonth);
+            const topMonth = Math.max(...quarterMonths.map(d => d.monthIndex));
+            const bottomMonth = Math.min(...quarterMonths.map(d => d.monthIndex));
+            const MONTH_PX = 126;    // 2026.3 → 2023.9 spans 30 months ≈ previous total height
+            const SVG_H   = PAD_TOP + (topMonth - bottomMonth) * MONTH_PX + PAD_BOT;
+            const geom    = _fgSCurveGeometry(quarters, SVG_W, PAD_TOP, MONTH_PX);
 
             // Memory shards — 20 total (10 per side), placed semi-randomly in
             // their .memory-column with varied sizes (small ↔ large) so the
@@ -781,7 +826,7 @@
                         <div class="tl-node__body">
                             <header class="tl-node__head">
                                 <span class="tl-label">${q.label}</span>
-                                <span class="tl-meta">${q.year} · ${q.season}</span>
+                                <span class="tl-meta">${stop.dateLabel} · ${q.season}</span>
                             </header>
                             ${kw ? `<p class="tl-keywords">${kw}</p>` : ''}
                             <p class="tl-summary">${q.summary || ''}</p>
@@ -817,30 +862,31 @@
                             <p class="fg-index" aria-hidden="true">${quarters.length} quarters · ${wbData.weibo.length} memories</p>
                         </header>
 
-                        <h1 class="fg-title">A Field Guide<br/>to Becoming</h1>
+                        <h1 class="fg-title">Katz Radio</h1>
 
                         <footer class="fg-hero-bottom">
                             <p class="fg-intro">
                                 A personal archive of memory, research quarters,
                                 cooking notes, and repeated listening.
                             </p>
-                            <div class="fg-actions">
-                                <button class="fg-btn fg-btn--primary" type="button"
-                                        data-action="timeline" data-cursor-label="Enter" data-cursor-mode="link">
-                                    <span class="fg-btn__num">01</span>
-                                    <span class="fg-btn__label">Timeline</span>
-                                    <span class="fg-btn__arrow" aria-hidden="true">↓</span>
-                                </button>
-                                <button class="fg-btn fg-btn--ghost" type="button"
-                                        data-action="random" data-cursor-label="Pick" data-cursor-mode="link">
-                                    <span class="fg-btn__num">02</span>
-                                    <span class="fg-btn__label">Random</span>
-                                    <span class="fg-btn__arrow" aria-hidden="true">↻</span>
-                                </button>
+                            <div class="fg-control-stack">
+                                <div class="random-memory-zone" aria-live="polite"></div>
+                                <div class="fg-actions">
+                                    <button class="fg-btn fg-btn--primary" type="button"
+                                            data-action="timeline" data-cursor-label="Enter" data-cursor-mode="link">
+                                        <span class="fg-btn__num">01</span>
+                                        <span class="fg-btn__label">Timeline</span>
+                                        <span class="fg-btn__arrow" aria-hidden="true">↓</span>
+                                    </button>
+                                    <button class="fg-btn fg-btn--ghost" type="button"
+                                            data-action="random" data-cursor-label="Pick" data-cursor-mode="link">
+                                        <span class="fg-btn__num">02</span>
+                                        <span class="fg-btn__label">Random</span>
+                                        <span class="fg-btn__arrow" aria-hidden="true">↻</span>
+                                    </button>
+                                </div>
                             </div>
                         </footer>
-
-                        <div class="random-memory-zone" aria-live="polite"></div>
                     </div>
                     <p class="fg-scroll-hint" aria-hidden="true">scroll · 时间倒流</p>
                 </section>
@@ -849,7 +895,7 @@
                     <header class="timeline-header">
                         <p class="tl-eyebrow">PhD Quarters · ${quarters.length} entries</p>
                         <h2 class="tl-title">The Long Walk Back</h2>
-                        <p class="tl-intro">From the most recent quarter to the very first. Scroll down to walk back in time.</p>
+                        <p class="tl-intro">From 2026.3 to 2023.9. The curve keeps the newest-to-oldest order, but its vertical spacing follows real calendar time.</p>
                     </header>
 
                     <div class="timeline-stage-grid">
@@ -1056,6 +1102,9 @@
             
             // 恢复背景滚动
             document.body.style.overflow = '';
+            if (window.lenis && typeof window.lenis.start === 'function') {
+                window.lenis.start();
+            }
         }
 
         // 渲染Deep Cooking页面 - 包含 philosophy + essays（迷思） + recipes
@@ -1244,7 +1293,13 @@
             body.innerHTML = bodyHTML;
 
             overlay.classList.add('active');
+            overlay.scrollTop = 0;
+            const scroller = overlay.querySelector('.detail-content');
+            if (scroller) scroller.scrollTop = 0;
             document.body.style.overflow = 'hidden';
+            if (window.lenis && typeof window.lenis.stop === 'function') {
+                window.lenis.stop();
+            }
         }
 
         // 极简 markdown 渲染：## 标题、> 引用、**加粗**、段落
