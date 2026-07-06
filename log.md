@@ -28,6 +28,25 @@
   - 建立微博数据的JSON格式存储
   - 实现微博文本的格式化和展示
 
+### 2026年7月6日
+#### 🔧 全站质量修复（三 agent 评审 → 53 项问题 → 集中修复）
+- **架构**: 内联脚本(~65KB)提取为 `app.js`；Lenis 改为自托管 `lenis.min.js`（jsdelivr 在国内不稳，defer 会阻塞首屏渲染）
+- **正确性**:
+  - 切页竞态修复：`navToken` 令牌，慢的旧 fetch 不再覆盖新页面（`switchListeningTab` 同理）
+  - 统一 `fetchJSON()`：检查 `response.ok`；`loadColumn` 补 `.catch`，失败不再永久空白
+  - XSS 防护：全部渲染函数经 `escapeHtml()` 转义 JSON 内容
+  - `_fgInitMotion` 的 window 监听改用 AbortController，不再每次回首页叠加泄漏
+- **性能**:
+  - 首页数据瘦身：`data/weibo-slim.json`（481KB，脚本 `scripts/build-weibo-slim.js` 生成），替代 2MB 全量微博；全量文件保留作回退
+  - by-year/by-artist 歌单懒渲染：展开时才注入 `<li>`（原先一次性 ~1.1 万节点）
+  - 去掉切页人为 300ms 延迟；删除 `will-change` 滥用；hero/入场 filter blur 过渡移除；hover-preview 每帧 offsetWidth 读取改为缓存
+- **无障碍**:
+  - 导航/听歌 tab 改 `<button>`（含 role=tablist/tab）；卡片、essay 标题、歌单标题加 `role="button"` + `tabindex` + 委托键盘激活；弹窗加 `role="dialog"` + 焦点圈定/归还
+  - 对比度：`--ink-faint` #857f74→#706a60（3.5→4.7:1）；新增 `--accent-text` 用于小号强调文字
+  - 逐字拆分标题补 `aria-label`；reduced-motion 下时间轴 `transform !important` 布局破坏修复
+- **SEO/杂项**: 补 meta description/OG/favicon/canonical/noscript；`document.title` 随页面切换；死代码（mockData/loadPage 等约 180 行）删除
+- **验证**: headless Edge 渲染四个页面 + 懒渲染交互测试全部通过
+
 ### 2024年8月19日
 #### 🔄 咔言咔语界面翻转效果
 - **完成时间**: 全天

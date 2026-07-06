@@ -8,10 +8,11 @@
     'use strict';
 
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const finePointer  = window.matchMedia('(pointer: fine)').matches;
-    const isTouch      = ('ontouchstart' in window) || window.matchMedia('(pointer: coarse)').matches;
+    // 不用 ontouchstart 判定触屏——带触屏的笔记本 + 鼠标会被误杀整个桌面体验。
+    // 以 hover+pointer 媒体查询为准，与 style.css 的 (pointer: coarse) 门保持一致。
+    const hasFinePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
     const enableMotion = !reduceMotion;
-    const enableCursor = enableMotion && finePointer && !isTouch;
+    const enableCursor = enableMotion && hasFinePointer;
 
     // ---------- Motion runtime (Phase 3) ----------
     // One motionState object shared across cursor / hover-preview / lenis / future
@@ -107,7 +108,7 @@
     // Init only — Lenis's raf is now driven by motionFrame above.
     let lenisInstance = null;
     function initSmoothScroll() {
-        if (!enableMotion || isTouch) return;
+        if (!enableMotion || !hasFinePointer) return;
         if (typeof window.Lenis !== 'function') return;
         try {
             lenisInstance = new window.Lenis({
@@ -215,7 +216,7 @@
             { sel: '.close-btn',                       label: 'Close', mode: 'link' },
             { sel: '.lt-tab',                          label: 'View',  mode: 'link' },
             { sel: '.playlist-title',                  label: 'Play',  mode: 'link' },
-            { sel: '#navbar span',                     label: 'Go',    mode: 'link' },
+            { sel: '#navbar button',                   label: 'Go',    mode: 'link' },
             // Project-mode (heavy filled ring + label replaces cursor body)
             { sel: '.recipes-section .essay-entry',    label: 'Cook',  mode: 'project' },
             { sel: '.essay-entry[data-source="recipe"]', label: 'Cook', mode: 'project' },
@@ -426,9 +427,21 @@
         const ROT_LERP     = 0.18;
         const PERSPECTIVE  = 900;
         let rotX = 0, rotY = 0;
+        // 尺寸只在初始化 / resize 时量一次，不在每帧读 offsetWidth（强制布局）
+        let pvW = 240, pvH = 320;
+        const measurePreview = () => {
+            pvW = preview.offsetWidth  || 240;
+            pvH = preview.offsetHeight || 320;
+        };
+        measurePreview();
+        window.addEventListener('resize', measurePreview);
+        let wasActive = false;
         addMotionTicker((s) => {
-            const w = preview.offsetWidth  || 240;
-            const h = preview.offsetHeight || 320;
+            // 预览隐藏时跳过每帧读写；隐藏后的第一帧再写一次（缩回 0.96）
+            if (!active && !wasActive) return;
+            wasActive = active;
+            const w = pvW;
+            const h = pvH;
             const x  = s.pointer.x + 24;
             const y  = s.pointer.y + 24;
             const cx = Math.min(Math.max(0, x), window.innerWidth  - w - 8);
@@ -471,7 +484,12 @@
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         }
         resize();
-        window.addEventListener('resize', resize);
+        // resize 会重分配 canvas（清空画面），拖拽调窗口时按帧节流
+        let resizeRaf = null;
+        window.addEventListener('resize', () => {
+            if (resizeRaf) return;
+            resizeRaf = requestAnimationFrame(() => { resizeRaf = null; resize(); });
+        });
 
         // Per-page painters. Each receives (ctx, w, h, t [ms], motionState).
         // All draw in the local logical pixel space (DPR is baked into transform).
@@ -586,8 +604,13 @@
             // and on fetch failure the scene committed to a page that never
             // rendered. With pendingNavId-gating above, we also skip stale navs.
             if (pageName) {
-                motionState.currentPage = pageName;
-                if (document.body) document.body.dataset.page = pageName;
+                // 加载失败的占位内容不提交页面身份，否则场景画布会切到一个
+                // 从未真正渲染出来的页面背景
+                const isErrorRender = content.querySelector(':scope > .error');
+                if (!isErrorRender) {
+                    motionState.currentPage = pageName;
+                    if (document.body) document.body.dataset.page = pageName;
+                }
             }
             if (enableMotion) {
                 content.classList.remove('is-leaving');
@@ -611,6 +634,13 @@
         function attachToAddedNodes(addedNodes) {
             for (const node of addedNodes) {
                 if (!node || node.nodeType !== 1) continue;
+                // 跳过增强层自己注入的节点（kt-*/cp-*），避免观察者自触发的多余扫描
+                if (node.classList && (
+                    node.classList.contains('kt-run') ||
+                    node.classList.contains('kt-mask') ||
+                    node.classList.contains('cp-archive') ||
+                    node.classList.contains('cp-note') ||
+                    node.classList.contains('cp-vol'))) continue;
                 attachPlaylistOpenMirror(node);
                 attachAccordionMeasure(node);
                 initKineticType(node);
@@ -642,6 +672,9 @@
                 // secondary render paths (switchListeningTab, renderColumnView)
                 // without the per-mutation duplication codex Phase 8 caught.
                 if (polishNeeded) applyContentPolish();
+                // 丢弃回调内部注入（kt-mask / cp-*）产生的自触发记录，
+                // 避免每次渲染多跑 2-3 轮全 document 扫描
+                pageObserver.takeRecords();
             });
             pageObserver.observe(content, { childList: true, subtree: true });
         }
@@ -665,6 +698,15 @@
             const myNavId = navId;
             const myPage  = pageName || null;
             const result = original.apply(this, arguments);
+            if (content && enableMotion) {
+                // 看门狗：万一 fetch 悬死（不 resolve 也不 reject），5s 后
+                // 解除 .is-leaving，别让页面永远停在隐藏态
+                setTimeout(() => {
+                    if (myNavId === navId && pendingNavId === myNavId) {
+                        content.classList.remove('is-leaving');
+                    }
+                }, 5000);
+            }
             if (content && !supportsMO) {
                 // No MutationObserver → call polish from the same setTimeout that
                 // commits the render hooks, so the no-MO fallback still gets it.
@@ -682,8 +724,25 @@
     // actual scrollHeight measured at toggle time, so long entries don't clip and
     // the height-transition matches real content. Watches the .open class on each
     // .essay-entry / .playlist-content.
+    // 窗口尺寸变化时重测所有打开的手风琴（一次性绑定，防止 open 时快照的
+    // scrollHeight 在 resize 后裁切内容）
+    let accordionResizeBound = false;
+    function bindAccordionResize() {
+        if (accordionResizeBound) return;
+        accordionResizeBound = true;
+        let timer = null;
+        window.addEventListener('resize', () => {
+            clearTimeout(timer);
+            timer = setTimeout(() => {
+                document.querySelectorAll('.essay-entry.open .essay-body, .playlist-content.open')
+                    .forEach(el => { el.style.maxHeight = el.scrollHeight + 'px'; });
+            }, 150);
+        });
+    }
+
     function attachAccordionMeasure(scope) {
         if (!('MutationObserver' in window)) return;
+        bindAccordionResize();
         const root = scope || document;
 
         // .essay-entry — body lives in a child .essay-body; .open toggled on entry
@@ -791,6 +850,7 @@
                     }
                     const mask = document.createElement('span');
                     mask.className = 'kt-mask';
+                    mask.setAttribute('aria-hidden', 'true');
                     const inner = document.createElement('span');
                     inner.className = 'kt-inner';
                     inner.style.setProperty('--kt-i', String(Math.min(counter, 60)));
@@ -823,6 +883,13 @@
             // Skip if no text to split
             const hasText = Array.from(el.childNodes).some(n => n.nodeType === 3 && n.textContent.trim());
             if (!hasText) return;
+            // 逐字拆分会让读屏逐字朗读、页内查找失效——拆分前把原文挂到
+            // aria-label（只取文本节点，不含 toggle-icon 等子元素）
+            const textLabel = Array.from(el.childNodes)
+                .filter(n => n.nodeType === 3)
+                .map(n => n.textContent)
+                .join('').trim();
+            if (textLabel) el.setAttribute('aria-label', textLabel);
             splitElementText(el);
             obs.observe(el);
         });
@@ -900,10 +967,10 @@
         initCursor();
         initHoverPreview();
         initSceneLayer();
-        // Single RAF drives Lenis + cursor + hover-preview + (future) line field.
-        // Always start the loop — even with reduced motion / touch, scroll/page
-        // tracking still updates motionState for later modules to read.
-        startMotionLoop();
+        // Single RAF drives Lenis + cursor + hover-preview + line field.
+        // reduced-motion 下没有任何模块注册 ticker、Lenis 也不会初始化，
+        // 空转 60fps 只费电——不启动。
+        if (enableMotion) startMotionLoop();
         // Reveal observer + playlist mirror + accordion measurement are all
         // re-attached after each page load by the wrapper; this initial pass
         // covers any static content that landed before the first navigation.

@@ -11,10 +11,13 @@
     --bg:           #f5f0e6;
     --ink:          #1a1a14;
     --ink-soft:     #6b675e;
-    --ink-faint:    #857f74;
+    /* #857f74 只有 3.5:1（对 --bg），达不到 WCAG AA 的 4.5:1；加深到 ≈4.7:1 */
+    --ink-faint:    #706a60;
     --rule:         #e6dfd1;
     --rule-soft:    #efe9dc;
     --accent:       #a85a3a;
+    /* accent 作小号正文颜色时用这个更深的变体（≈5.2:1，#a85a3a 只有 4.4:1） */
+    --accent-text:  #9a4f31;
     --accent-soft:  rgba(168, 90, 58, 0.06);
     --accent-mid:   rgba(168, 90, 58, 0.18);
     --paper:        #fbf7ee;
@@ -41,7 +44,7 @@
     /* Layout */
     --content-max:    1280px;
     --reading-max:    760px;
-    --nav-h:          72px;
+    --nav-h:          80px;
 }
 
 /* -------------------------------------------------------------------------
@@ -127,7 +130,6 @@ iframe {
     margin: 0 auto;
     padding: 0 28px var(--s-7);
     transition: opacity 360ms var(--ease-edit);
-    will-change: opacity, transform;
 }
 
 /* Pages with grids (say) want a wider canvas */
@@ -227,7 +229,7 @@ body[data-page="listening"] .scene-canvas { opacity: 0.62; }
     text-transform: uppercase;
 }
 
-#navbar span {
+#navbar button {
     counter-increment: nav;
     font-family: var(--serif-display);
     font-size: 14px;
@@ -235,12 +237,14 @@ body[data-page="listening"] .scene-canvas { opacity: 0.62; }
     letter-spacing: 1.2px;
     cursor: pointer;
     position: relative;
-    padding: 6px 2px;
+    /* 负 margin 抵消一部分布局高度：可点区域 ≥40px，视觉高度基本不变 */
+    padding: 12px 4px;
+    margin: -6px 0;
     transition: color 320ms var(--ease-edit);
     user-select: none;
 }
 
-#navbar span::before {
+#navbar button::before {
     content: counter(nav, decimal-leading-zero);
     margin-right: 8px;
     font-family: var(--mono);
@@ -250,12 +254,12 @@ body[data-page="listening"] .scene-canvas { opacity: 0.62; }
     vertical-align: 1px;
 }
 
-#navbar span::after {
+#navbar button::after {
     content: '';
     position: absolute;
     left: 0;
     right: 0;
-    bottom: -2px;
+    bottom: 6px;
     height: 1px;
     background: var(--ink);
     transform: scaleX(0);
@@ -263,19 +267,19 @@ body[data-page="listening"] .scene-canvas { opacity: 0.62; }
     transition: transform 420ms var(--ease-edit);
 }
 
-#navbar span:hover {
+#navbar button:hover {
     color: var(--ink);
 }
 
-#navbar span:hover::after {
+#navbar button:hover::after {
     transform: scaleX(1);
 }
 
-#navbar span.active {
+#navbar button.active {
     color: var(--ink);
 }
 
-#navbar span.active::after {
+#navbar button.active::after {
     transform: scaleX(1);
     background: var(--accent);
 }
@@ -600,7 +604,8 @@ body[data-page="listening"] .scene-canvas { opacity: 0.62; }
 }
 
 .essay-entry.open .essay-body {
-    max-height: 1600px;
+    /* 兜底值（enhance.js 会按 scrollHeight 写实际值）；1600px 会截断长摘要 */
+    max-height: 4000px;
     opacity: 1;
     padding: 18px 4px 8px;
 }
@@ -623,7 +628,8 @@ body[data-page="listening"] .scene-canvas { opacity: 0.62; }
     color: var(--ink-soft);
     letter-spacing: 1.4px;
     text-transform: uppercase;
-    padding: 4px 0;
+    /* ≥24px 触摸目标（WCAG 2.5.8） */
+    padding: 8px 0;
     margin-left: 18px;
     position: relative;
     transition: color 280ms var(--ease-edit), letter-spacing 320ms var(--ease-edit);
@@ -643,16 +649,12 @@ body[data-page="listening"] .scene-canvas { opacity: 0.62; }
 }
 
 .read-full:hover {
-    color: var(--accent);
+    color: var(--accent-text);
     letter-spacing: 1.7px;
 }
 
 .read-full:hover::after {
     transform: scaleX(1);
-}
-
-.column-list .essay-entry:first-child {
-    border-top: 1px solid var(--rule);
 }
 
 /* -------------------------------------------------------------------------
@@ -725,6 +727,7 @@ body[data-page="listening"] .scene-canvas { opacity: 0.62; }
 }
 
 .collapsible-section.open .section-body {
+    /* 兜底值；enhance.js 打开时会按 scrollHeight 写入实际 max-height */
     max-height: 60000px;
     opacity: 1;
 }
@@ -1110,7 +1113,6 @@ body[data-page="listening"] .scene-canvas { opacity: 0.62; }
 
 .ne-iframe {
     width: 100%;
-    border: none;
     background: var(--paper);
     border: 1px solid var(--rule);
 }
@@ -1566,7 +1568,7 @@ body.has-custom-cursor iframe {
     transition: opacity 800ms var(--ease-edit),
                 transform 800ms var(--ease-edit);
     transition-delay: calc(var(--reveal-i, 0) * 60ms);
-    will-change: opacity, transform;
+    /* 不要 will-change：列表页几百个 .reveal 会常驻几百个合成层 */
 }
 
 .reveal.is-visible {
@@ -1680,12 +1682,12 @@ body.has-custom-cursor iframe {
         letter-spacing: 1.4px;
     }
 
-    #navbar span {
+    #navbar button {
         font-size: 12px;
         letter-spacing: 1px;
     }
 
-    #navbar span::before {
+    #navbar button::before {
         font-size: 9px;
         margin-right: 4px;
     }
@@ -1825,13 +1827,14 @@ body.has-custom-cursor iframe {
     position: relative;
     width: 100%;
     max-width: none;
-    min-height: calc(100vh - 80px);
+    min-height: calc(100vh - var(--nav-h));
     padding: 0;
     margin: 0;
     background: var(--bg);
     display: block;
     transform-origin: 50% 0;
-    transition: transform 1.4s var(--ease-edit), opacity 1.4s var(--ease-edit), filter 1.4s var(--ease-edit);
+    /* 不过渡 filter：给整个视口大小的元素做 1.4s blur 过渡代价太高 */
+    transition: transform 1.4s var(--ease-edit), opacity 1.4s var(--ease-edit);
 }
 
 .fg-hero-inner {
@@ -1841,7 +1844,7 @@ body.has-custom-cursor iframe {
     /* horizontal padding is the only thing keeping content off the edges */
     padding: clamp(32px, 4vh, 56px) clamp(40px, 6vw, 120px);
     box-sizing: border-box;
-    min-height: calc(100vh - 80px);
+    min-height: calc(100vh - var(--nav-h));
     display: grid;
     grid-template-rows: auto 1fr auto;   /* top, title (flex), bottom */
     gap: clamp(40px, 7vh, 96px);
@@ -1944,10 +1947,10 @@ body.has-custom-cursor iframe {
     color: var(--ink-faint);
     margin: 0;
     pointer-events: none;
-    opacity: 0.6;
+    opacity: 0.8;
     transition: opacity 600ms var(--ease-soft);
 }
-.field-guide-hero:hover .fg-scroll-hint { opacity: 0.9; }
+.field-guide-hero:hover .fg-scroll-hint { opacity: 1; }
 
 /* -------------------------------------------------------------------------
    18. Guide action buttons (Timeline / Random) — true side-by-side via grid.
@@ -2335,10 +2338,9 @@ body.has-custom-cursor iframe {
     font-family: var(--serif-body);
     font-style: italic;
     font-size: 13px;
-    color: var(--accent);
+    color: var(--accent-text);
     margin: 0 0 var(--s-2);
     letter-spacing: 0.02em;
-    opacity: 0.85;
 }
 
 .tl-summary {
@@ -2358,12 +2360,13 @@ body.has-custom-cursor iframe {
     color: var(--ink-soft);
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    padding: 4px 0;
+    /* ≥24px 触摸目标 */
+    padding: 8px 0 6px;
     border-bottom: 1px solid var(--rule);
     transition: color 400ms var(--ease-edit), border-color 400ms var(--ease-edit), letter-spacing 400ms var(--ease-edit);
 }
 .tl-read:hover {
-    color: var(--accent);
+    color: var(--accent-text);
     border-color: var(--accent);
     letter-spacing: 0.24em;
 }
@@ -2428,7 +2431,7 @@ body.has-custom-cursor iframe {
     transition: opacity 1200ms var(--ease-soft),
                 filter 1200ms var(--ease-soft),
                 transform 900ms var(--ease-soft);
-    will-change: opacity, filter, transform;
+    /* 不加 will-change：20 个 shard 常驻合成层内存代价大于收益 */
 }
 
 /* Horizontal alignment within column — left column shards push toward the
@@ -2489,7 +2492,6 @@ body.has-custom-cursor iframe {
 body.is-entering-timeline .field-guide-hero {
     transform: translateY(-24px) scale(0.985);
     opacity: 0.45;
-    filter: blur(1.5px);
     pointer-events: none;
 }
 
@@ -2585,9 +2587,10 @@ body.is-entering-timeline .field-guide-hero {
 
 /* On medium widths where there's not enough room for shard columns + curve,
    hide the side columns and let the curve sit in the middle alone.
-   The 3-col grid uses minmax(140, 1fr) for sides; below ~960 those columns
-   start eating into the curve space. */
-@media (max-width: 960px) and (min-width: 769px) {
+   The 3-col grid min track sum (140+min(720,60vw)+140 + gaps) exceeds the
+   available width up to ~1080px, causing horizontal clipping — so the
+   side columns hide below 1080, not 960. */
+@media (max-width: 1080px) and (min-width: 769px) {
     .memory-column { display: none; }
     .timeline-stage-grid {
         grid-template-columns: 1fr;
@@ -2618,7 +2621,9 @@ body.is-entering-timeline .field-guide-hero {
         filter: none !important;
         transform: rotate(var(--shard-rot, 0deg)) !important;
     }
-    .tl-node { opacity: 1 !important; transform: translate(-50%, -50%) !important; }
+    /* 只锁 opacity。不要锁 transform——会覆盖 ≤768px 断点的 transform: none，
+       在减弱动效的手机上把整个时间轴布局打碎（桌面基础规则本来就有该 transform） */
+    .tl-node { opacity: 1 !important; }
     .s-curve-svg .s-curve-base {
         stroke-dasharray: none !important;
         stroke-dashoffset: 0 !important;
@@ -2631,7 +2636,7 @@ body.is-entering-timeline .field-guide-hero {
     .field-guide-hero .fg-eyebrow,
     .field-guide-hero .fg-title,
     .field-guide-hero .fg-intro,
-    .field-guide-hero .fg-actions,
+    .field-guide-hero .fg-control-stack,
     .field-guide-hero .fg-scroll-hint {
         animation: none !important;
         opacity: 1 !important;
