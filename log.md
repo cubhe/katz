@@ -28,6 +28,13 @@
   - 建立微博数据的JSON格式存储
   - 实现微博文本的格式化和展示
 
+### 2026年7月11日
+#### 🐛 三个交互 bug 修复 + 同步 26 Spring
+- **弹窗滚轮失效**：Lenis 全局劫持滚轮 + 弹窗打开时 body `overflow:hidden` 导致滚轮落空。给 `#detailOverlay` / `.detail-content` 加 `data-lenis-prevent`，让 Lenis 放行、弹窗原生滚动
+- **跟随缩略图不消失**：进文章/切页时 DOM 被 innerHTML 整体替换、不触发 mouseout，`hide()` 永不调用。改为任意点击时主动 `hide()`（导航都由点击触发）
+- **首页文章块整块可点**：`.tl-node__body` 加点击处理 + 光标提示 + `cursor:pointer`；保留 Read more 按钮供键盘/无障碍（带 stopPropagation 不重复触发）
+- **同步 26 Spring**：从 Notion「26 spring quarter」整理草稿（去重复段落、空块、未写完的「发烧」残句）写入 quarters.json；关键词 suffering optional / 游牧民族 / resilience
+
 ### 2026年7月6日
 #### 🔧 全站质量修复（三 agent 评审 → 53 项问题 → 集中修复）
 - **架构**: 内联脚本(~65KB)提取为 `app.js`；Lenis 改为自托管 `lenis.min.js`（jsdelivr 在国内不稳，defer 会阻塞首屏渲染）

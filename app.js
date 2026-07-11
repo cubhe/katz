@@ -680,7 +680,7 @@
                     <article class="tl-node tl-node--${sideClass}" data-id="${escapeHtml(q.id)}"
                              style="--node-left: ${leftPct.toFixed(3)}%; --node-top: ${topPx}px;">
                         <span class="tl-dot" aria-hidden="true"></span>
-                        <div class="tl-node__body">
+                        <div class="tl-node__body" data-cursor-label="Read" data-cursor-mode="link">
                             <header class="tl-node__head">
                                 <span class="tl-label">${escapeHtml(q.label)}</span>
                                 <span class="tl-meta">${stop.dateLabel} · ${escapeHtml(q.season)}</span>
@@ -796,6 +796,16 @@
                     const qid = btn.getAttribute('data-quarter-id');
                     if (qid) showEssayDetail('quarters', qid);
                 });
+            });
+
+            // 整块文字区域可点，不止 "Read more" 按钮。按钮带 stopPropagation，
+            // 点它不会冒泡到这里，避免重复触发。
+            content.querySelectorAll('.tl-node').forEach(node => {
+                const body = node.querySelector('.tl-node__body');
+                const qid = node.getAttribute('data-id');
+                if (body && qid) {
+                    body.addEventListener('click', () => showEssayDetail('quarters', qid));
+                }
             });
 
             // Defer motion init until layout settled (SVG getTotalLength needs DOM).

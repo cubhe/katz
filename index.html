@@ -45,8 +45,8 @@
     </noscript>
 
     <!-- 详细内容弹窗 - 仅用于咔言咔语页面 -->
-    <div class="detail-overlay" id="detailOverlay" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
-        <div class="detail-content">
+    <div class="detail-overlay" id="detailOverlay" role="dialog" aria-modal="true" aria-labelledby="detailTitle" data-lenis-prevent>
+        <div class="detail-content" data-lenis-prevent>
             <button class="close-btn" onclick="closeDetail()" data-cursor-label="Close" aria-label="关闭">&times;</button>
             <h2 class="detail-title" id="detailTitle"></h2>
             <div id="detailBody"></div>

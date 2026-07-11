@@ -2296,6 +2296,7 @@ body.has-custom-cursor iframe {
     background: var(--bg);
     padding: var(--s-3) var(--s-3) var(--s-3);
     transform: translateY(-50%);
+    cursor: pointer;   /* 整块可点进文章 */
 }
 .tl-node--right .tl-node__body {
     left: calc(50% + 64px);

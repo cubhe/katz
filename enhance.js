@@ -416,6 +416,9 @@
             const to   = e.relatedTarget instanceof Element ? e.relatedTarget.closest(PROJECT_SEL) : null;
             if (from && from !== to) hide();
         });
+        // 点击进文章 / 切页时，DOM 被 innerHTML 整体替换，不会触发 mouseout，
+        // 跟随预览会卡住不消失。任意点击都主动收起（导航都由点击触发）。
+        document.addEventListener('click', hide);
 
         // Per-frame transform: pointer (smoothed) + 24px down-right, viewport-clamped,
         // velocity-driven rotateX/rotateY tilt (lerped) wrapped in perspective().
